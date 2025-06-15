@@ -1,0 +1,129 @@
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+
+[build-system]
+requires = ["setuptools >= 61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "new-lease-on-life"
+version = "0.1.0"
+description = "Silly little side project helping me find a rental"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "aiohttp",
+    "duckdb",
+    "googlemaps",
+    "httpx>=0.28.1",
+    "ruamel-yaml>=0.18.14",
+]
+
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "isort",
+    "md-toc",
+    "watchdog",
+    "mypy",
+    "pytest",
+    "pytest-asyncio>=1.0.0",
+    "pytest-playwright-asyncio>=0.7.0",
+    "pytest-xdist>=3.7.0",
+    "pytest-randomly>=3.16.0",
+    "pytest-cov>=6.1.1",
+    "testcontainers>=4.10.0",
+    "pandas>=2.2.3",
+    "boto3-stubs[s3,dynamodb]"
+    
+]
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",# pycodestyle
+    "F", # Pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "SIM", # flake8-simplify
+    # "I", # isort
+    "PTH", # falek8-use-pathlib 
+    "TCH", # flake8-type-checking
+    # "S", # flake8-bandit
+    "C90", #mccabe
+]
+ignore = ["E402"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 5.
+max-complexity = 10
+
+
+[tool.isort]
+profile = "black"
+line_length = 120
+known_first_party = ["patent_playwright_poc"]
+known_third_party = ["playwright"]
+lines_between_types = 1
+force_single_line = false
+lines_after_imports = 2
+# https://pycqa.github.io/isort/docs/configuration/multi_line_output_modes.html
+multi_line_output = 3
+skip_gitignore = true
+extend_skip_glob = [".*_cache"]
+src_paths = ["src", "test", "scripts", "tests"]
+import_heading_stdlib = "Standard Library"
+import_heading_firstparty = "Our Libraries"
+import_heading_thirdparty = "Third Party"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+# addopts = "-s -vvv --color=yes --durations=0 --tb=native --capture=no"
+addopts = "-s -vvv --color=yes --durations=0 --tb=native --capture=no -n auto --cov=src --cov-report=html --cov-report=term"
+markers = [
+    "cloud: marks tests as cloud integrating and could be flaky based on network (deselect with '-m \"not cloud\"')",
+    "asyncio: tests that require an asyncio event loop",
+]
+asyncio_mode = "auto"
+asyncio_default_test_loop_scope = "session"
+
+[tool.coverage.run]
+omit = ["tests/*", "**/__init__.py", "tasks.py", "infra_cdk/*"]
+branch = true
+
+[tool.mypy]
+pretty = true
+show_error_codes = true
+show_column_numbers = true
+show_error_context = true
+exclude = [
+  'tests/',
+  'infra_cdk',
+  '.venv/',
+  'docs/'
+]
+follow_imports = 'silent'
+ignore_missing_imports = true
+# Work your way up to these:
+disallow_incomplete_defs = true
+# disallow_untyped_defs = true 
+# disallow_untyped_calls = true
+# strict = true
+
