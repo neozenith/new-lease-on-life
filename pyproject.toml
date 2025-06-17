@@ -17,9 +17,12 @@ requires-python = ">=3.12"
 dependencies = [
     "aiohttp",
     "duckdb",
+    "fastapi>=0.115.12",
     "googlemaps",
     "httpx>=0.28.1",
+    "polyline>=2.0.2",
     "ruamel-yaml>=0.18.14",
+    "uvicorn>=0.34.3",
 ]
 
 
