@@ -286,7 +286,7 @@ gdf_ptv_hulls = gpd.read_parquet(PTV_HULLS)
 tier_size=10  # minutes
 tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
 
-gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['transit_time_minutes_nearest_tier'].isin(tiers)]
+# gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['transit_time_minutes_nearest_tier'].isin(tiers)]
 gdf_ptv_hulls['color'] = gdf_ptv_hulls.apply(get_hull_color, axis=1)
 # Create a layer for the commute time hull polygons
 ptv_commute_hulls_layer = pdk.Layer(
@@ -355,7 +355,7 @@ for mode in MODES.keys():
             )
             visible_isochrone_layers.append(isochrone_layers[mode][tier])
 
-# LAYERS.append(postcode_boundary_layer)
+LAYERS.append(postcode_boundary_layer)
 
 # LAYERS.append(traintram_outer_boundary_layer)
 
@@ -369,7 +369,7 @@ LAYERS.extend(visible_isochrone_layers)
 LAYERS.append(ptv_lines_layer)
 
 # Add the commute time hull polygons first (will be below stops)
-LAYERS.append(ptv_commute_hulls_layer)
+# LAYERS.append(ptv_commute_hulls_layer)
 
 # Add the stops on top for better visibility
 LAYERS.append(ptv_stops_layer)

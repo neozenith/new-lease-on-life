@@ -103,10 +103,10 @@ def create_hulls(gdf):
         gdf_ptv_stops = gdf_ptv_stops.reset_index()
     
     PTV_MODES = ["REGIONAL TRAIN", "METRO TRAIN", "METRO TRAM"]
-    gdf_ptv_stops = gdf_ptv_stops[gdf_ptv_stops['MODE'].isin(PTV_MODES)]
+    # gdf_ptv_stops = gdf_ptv_stops[gdf_ptv_stops['MODE'].isin(PTV_MODES)]
 
     tier_size = HULL_TIER_SIZE
-    tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
+    # tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
     gdf_ptv_stops['transit_time_minutes_nearest_tier'] = (gdf_ptv_stops['transit_time_minutes'] / tier_size).round() * tier_size
     gdf_ptv_stops['transit_time_minutes_nearest_tier_z'] = min_max_normalize(gdf_ptv_stops['transit_time_minutes_nearest_tier']) * 0.5 + 0.5
     print(gdf_ptv_stops['transit_time_minutes_nearest_tier_z'])
@@ -165,11 +165,11 @@ def create_hulls(gdf):
 
     # Combine all hulls into a single GeoDataFrame
     gdf_ptv_tiers = pd.concat(hull_tiers, ignore_index=True)
-    gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
+    # gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
 
     # Define the tiers we want to keep
     
-    gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['transit_time_minutes_nearest_tier'].isin(tiers)]
+    # gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['transit_time_minutes_nearest_tier'].isin(tiers)]
 
     # Sort by tier in descending order (largest to smallest)
     # This ensures smaller tiers are drawn last and appear on top for hover interactions

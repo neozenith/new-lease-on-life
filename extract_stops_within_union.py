@@ -34,7 +34,7 @@ def extract_stops_within_union():
         stops_gdf = stops_gdf.to_crs(unioned_gdf.crs)
 
     # Find stops within the unioned polygon
-    stops_within = stops_gdf[stops_gdf.within(unioned_geom)]
+    stops_within = stops_gdf #[stops_gdf.within(unioned_geom)]
 
 
     if "MODE" in stops_within.columns:

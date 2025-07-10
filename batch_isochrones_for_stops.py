@@ -100,7 +100,7 @@ def scrape():
                 result = get_isochrone(lat, lon, mode, TIME_LIMIT, BUCKETS, GRAPHHOPPER_API_KEY)
                 out_file.write_text(json.dumps(result, indent=2))                
                 print(f"✅ Saved {mode} {stop_id} ({stop_name}) to {out_file}")
-                time.sleep(2)  # Avoid hitting API rate limits
+                time.sleep(3)  # Avoid hitting API rate limits
             except Exception as e:
                 print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: {e}")
 
