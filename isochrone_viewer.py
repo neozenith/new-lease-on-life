@@ -68,13 +68,27 @@ def rgba_float_to_255(rgba: tuple[float, float, float, float]) -> list[int]:
 def min_max_normalize(series):
     return (series - series.min()) / (series.max() - series.min())
 
+
+
 PTV_STOPS = "data/geojson/ptv/stops_with_commute_times.parquet"
 PTV_LINES = "data/public_transport_lines.geoparquet"
 PTV_HULLS = "data/geojson/ptv/ptv_commute_tier_hulls.parquet"
 
-SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_postcodes.parquet"
-
 POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes.parquet"
+SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_postcodes.parquet"
+# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_lga_2024_aust_gda2020.parquet"
+# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_sa1_2021_aust_gda2020.parquet"
+# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_sa2_2021_aust_gda2020.parquet"
+
+mesh_key = "POA_CODE21"
+# mesh_key = "SAL_NAME21"
+# mesh_key = "MB_CODE21"
+# mesh_key = "LGA_CODE24"
+# mesh_key = "SA1_CODE21"
+# mesh_key = "SA2_CODE21"
+
+
+
 TRAM_POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams.parquet"
 TRAINTRAM_POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams_trains.parquet"
 
@@ -148,9 +162,11 @@ LAYERS = []
 
 gdf_postcodes = gpd.read_parquet(SELECTED_POSTCODES)
 gdf_postcodes = gdf_postcodes.to_crs("EPSG:4326")
-color_lookup = {k: [c[0], c[1], c[2], int(255*SUBURB_OPACITY)] for k, c in pdk.data_utils.assign_random_colors(gdf_postcodes['POA_CODE21']).items()}
+
+
+color_lookup = {k: [c[0], c[1], c[2], int(255*SUBURB_OPACITY)] for k, c in pdk.data_utils.assign_random_colors(gdf_postcodes[mesh_key]).items()}
 # Assign a color based on attraction_type
-gdf_postcodes['color'] = gdf_postcodes.apply(lambda row: color_lookup.get(row['POA_CODE21']), axis=1)
+gdf_postcodes['color'] = gdf_postcodes.apply(lambda row: color_lookup.get(row[mesh_key]), axis=1)
 
 postcode_boundary_layer = pdk.Layer(
     "GeoJsonLayer",
@@ -283,6 +299,12 @@ def get_hull_color(row):
 
 gdf_ptv_hulls = gpd.read_parquet(PTV_HULLS)
 
+
+# gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
+print(f"{gdf_ptv_hulls.columns=}")
+print(f"{gdf_ptv_hulls['transit_time_minutes_nearest_tier'].unique()=}")
+gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['transit_time_minutes_nearest_tier'].isin([15, 30, 45, 60])]
+
 tier_size=10  # minutes
 tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
 
@@ -355,7 +377,7 @@ for mode in MODES.keys():
             )
             visible_isochrone_layers.append(isochrone_layers[mode][tier])
 
-LAYERS.append(postcode_boundary_layer)
+# LAYERS.append(postcode_boundary_layer)
 
 # LAYERS.append(traintram_outer_boundary_layer)
 
@@ -369,7 +391,7 @@ LAYERS.extend(visible_isochrone_layers)
 LAYERS.append(ptv_lines_layer)
 
 # Add the commute time hull polygons first (will be below stops)
-# LAYERS.append(ptv_commute_hulls_layer)
+LAYERS.append(ptv_commute_hulls_layer)
 
 # Add the stops on top for better visibility
 LAYERS.append(ptv_stops_layer)

@@ -15,7 +15,12 @@ import pathlib
 # File paths
 POSTCODES_CSV = "postcodes.csv"
 STOPS_GEOJSON = "data/public_transport_stops.geojson"
+
+
 GEOJSON_PATH = "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.geojson"
+
+BOUNDARIES_BASE = pathlib.Path("data/originals_converted/boundaries")
+BOUNDARIES = BOUNDARIES_BASE.rglob("**/*.geojson")
 
 OUTPUT_ROOT = pathlib.Path("data/geojson/ptv/boundaries/")
 
@@ -30,6 +35,7 @@ def extract_postcode_polygons():
 
     gdf_stops = gpd.read_file(STOPS_GEOJSON)
     print(f"Loaded {gdf_stops['MODE'].unique()} modes from {STOPS_GEOJSON}")
+
     gdf_stops_trams_trains = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAIN", "METRO TRAM"])].copy()
     print(f"Filtered {len(gdf_stops_trams_trains)} stops for {gdf_stops_trams_trains['MODE'].unique()} modes.")
     gdf_stops_trams = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAM"])].copy()
@@ -46,13 +52,9 @@ def extract_postcode_polygons():
         raise ValueError("Could not find postcode column in GeoJSON file.")
     print(f"Using postcode column: {postcode_col}")
 
-    # # Filter for selected postcodes
-    # gdf_postcodes = postcode_boundaries[postcode_boundaries[postcode_col].astype(str).isin(postcode_list)]
-    # print(f"Filtered {len(gdf_postcodes)} postcodes from {len(postcode_boundaries)} total.")
-    
-    # gdf_postcodes_with_trams = gpd.sjoin(postcode_boundaries, gdf_stops_trams, how="inner", predicate="intersects")
-    # print(f"Filtered {len(gdf_postcodes_with_trams)} postcodes with trams from {len(gdf_postcodes)} total postcodes.")
 
+
+    
     gdf_postcodes_with_trams_trains = gpd.sjoin(postcode_boundaries, gdf_stops_trams_trains, how="inner", predicate="intersects")
 
 
@@ -61,6 +63,11 @@ def extract_postcode_polygons():
         # "postcodes_with_trams": gdf_postcodes_with_trams,
         "postcodes_with_trams_trains": gdf_postcodes_with_trams_trains
     }
+
+    # for b in BOUNDARIES:
+    #     b_gdf = gpd.read_file(b)
+    #     select__b_gdf = gpd.sjoin(b_gdf, gdf_stops_trams_trains, how="inner", predicate="intersects")
+    #     output_target_bases[b.stem.lower()] = select__b_gdf
 
     for target, gdf in output_target_bases.items():
         selected_output_file = OUTPUT_ROOT / f"selected_{target}.geojson"

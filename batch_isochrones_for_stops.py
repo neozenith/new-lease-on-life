@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 from dotenv import load_dotenv
 import sys
+import argparse
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,6 +29,7 @@ TRANSPORT_MODES = ["foot", "car", "bike"]
 TRANSPORT_MODES = ["foot"]
 TIME_LIMIT = 900
 BUCKETS = 3
+
 
 STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
 OUTPUT_BASE = "data/geojson"
@@ -76,14 +78,14 @@ def status():
             expected_count += 1
             if out_file.exists():
                 cached_count += 1
-    print(f"Found {stops_count} stops, expected {expected_count} isochrones, {cached_count} cached files. {cached_count / expected_count * 100.0:.2f}%")
+    print(f"Found {stops_count} stops, expected {expected_count} isochrones, {cached_count} cached files and {expected_count - cached_count} remaining. {cached_count / expected_count * 100.0:.2f}%")
 
-def scrape():
+def scrape(limit):
     
     # Load stops
     gdf = gpd.read_file(STOPS_GEOJSON)
     stops_count = len(gdf)
-
+    count = 0
     for idx, row in gdf.iterrows():
         stop_id = row.get("STOP_ID", idx)
         stop_name = row.get("STOP_NAME", f"stop_{idx}")
@@ -97,15 +99,26 @@ def scrape():
                 # print(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
                 continue
             try:
+                if count >= limit:
+                    print(f"Reached limit of {limit} isochrones, stopping.")
+                    return
                 result = get_isochrone(lat, lon, mode, TIME_LIMIT, BUCKETS, GRAPHHOPPER_API_KEY)
                 out_file.write_text(json.dumps(result, indent=2))                
                 print(f"✅ Saved {mode} {stop_id} ({stop_name}) to {out_file}")
+                count += 1
                 time.sleep(3)  # Avoid hitting API rate limits
             except Exception as e:
                 print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: {e}")
 
 if __name__ == "__main__":
-    if "--status" in sys.argv:
+    parser = argparse.ArgumentParser(description="Batch process isochrones for public transport stops")
+    parser.add_argument("--status", action='store_true', help="Perform only a status check")
+    parser.add_argument("--limit", default=170, type=int, help="Specify the number of isochrones to scrape")
+    
+    args = parser.parse_args()
+
+    if args.status:
         status()
+        sys.exit(0)
     else:
-        scrape()
+        scrape(args.limit)
