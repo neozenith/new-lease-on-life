@@ -41,73 +41,6 @@ This project provides tools for geocoding addresses and calculating isochrones u
    # Edit .env to add your GraphHopper API key from GraphHopper website
    ```
 
-## Usage
-
-### 1. Geocode Addresses and Calculate Isochrones
-
-Create a YAML file with your addresses (see `addresses.yaml` for an example) and run:
-
-```bash
-uv run geocode_isochrones.py
-```
-
-This will:
-- Geocode each address in your YAML file
-- Calculate isochrones for each address with different transport modes
-- Cache results in a DuckDB database
-
-### 2. Visualize Isochrones with FastAPI Server
-
-Start the FastAPI server to visualize the isochrones:
-
-```bash
-uv run isochrone_server.py
-```
-
-Then open http://localhost:8000/app in your web browser.
-
-### 3. Standalone Isochrone Viewer
-
-For a lightweight visualization without needing a FastAPI server, use the standalone Panel app:
-
-```bash
-uv run isochrone_viewer.py
-```
-
-This will:
-- Launch a direct Panel app in your default web browser
-- Allow you to select addresses and transport modes
-- Visualize isochrones using PyDeckGL
-- Read directly from the DuckDB database
-
-
-This script also uses inline script metadata, ensuring that duckdb and the spatial extension are available when you run it with uv.
-
-### 5. Export Shapefiles to GeoJSON
-
-To convert shapefiles to GeoJSON format, use the export_shapefiles.py script:
-
-```bash
-# Export all shapefiles in the data directory
-uv run export_shapefiles.py
-
-# Export a specific shapefile
-uv run export_shapefiles.py --single-file data/LGA_2024_AUST_GDA2020/LGA_2024_AUST_GDA2020.shp
-
-# Simplify geometries to reduce file size
-uv run export_shapefiles.py --simplify 0.0001
-
-# Only export files with a specific suffix
-uv run export_shapefiles.py --filter-suffix AUST_GDA2020.shp
-```
-
-This will:
-- Convert shapefiles to GeoJSON format
-- Optionally simplify geometries to reduce file size
-- Output to the `data/geojson` directory by default
-- Reproject to WGS84 for web compatibility if needed
-
-
 ## License
 
 [MIT License](LICENSE)
@@ -183,36 +116,25 @@ The following diagram illustrates the flow of build artifacts and their dependen
 
 ```mermaid
 flowchart TB
-    %% Main auxiliary data files
-    POA["data/geojson/POA_2021_AUST_GDA2020.geojson"]
-    LGA["data/geojson/LGA_2024_AUST_GDA2020.geojson"]
-    SAL["data/geojson/SAL_2021_AUST_GDA2020.geojson"]
+    %% Main source files
     STOPS["data/public_transport_stops.geojson"]
+    POSTCODES["postcodes.csv"]
     
     %% Intermediate artifacts
-    POSTCODES["postcodes.csv"]
     UNION["unioned_postcodes.geojson"]
     STOPS_UNION["stops_within_union.geojson"]
     STOPS_TIMES["stops_with_commute_times.geoparquet"]
     
-    %% Process nodes
+    %% API and process nodes
     ISOCHRONES["Isochrones (raw)"]
     FIXED_ISOCHRONES["Fixed Isochrones"]
     CONSOLIDATED["Consolidated Isochrones"]
     GEOPARQUET["Migrated to GeoParquet"]
     RENTALS["Rental Properties"]
     
-    %% Subgraph for auxiliary data files
-    subgraph AuxData["Auxiliary Data Files"]
-        POA
-        LGA
-        SAL
-    end
-    
-    %% Subgraph for main flow
-    subgraph MainFlow["Main Workflow"]
+    %% Subgraph for auxiliary data
+    subgraph AuxData["Auxiliary Data Processing"]
         POSTCODES --> UNION
-        POA --> UNION
         UNION --> STOPS_UNION
         STOPS --> STOPS_UNION
         STOPS_UNION --> STOPS_TIMES
@@ -225,31 +147,57 @@ flowchart TB
         CONSOLIDATED --> GEOPARQUET
     end
     
-    %% Dependencies between subgraphs
-    AuxData --> MainFlow
-    MainFlow --> IsochroneProcessing
+    %% Workflow dependencies
+    AuxData --> IsochroneProcessing
     
-    %% Final visualization and rentals are independent tasks
+    %% Final targets
     STOPS_TIMES --> VIEWER["Isochrone Viewer"]
     GEOPARQUET --> VIEWER
     UNION --> RENTALS
+    
+    %% Makefile targets
+    subgraph MakeTargets["Makefile Targets"]
+        AUX["aux_data"] --> FIX["fix_geojson"]
+        SCRAPE["scrape_isochrones"] --> FIX
+        FIX --> CONS["consolidate_isochrones"]
+        CONS --> MIGRATE["migrate_geojson_geoparquet"]
+        RENTALS_TARGET["rentals"]
+        ALL["all"] --> VIEWER_TARGET["isochrone_viewer.py"]
+    end
+    
+    %% Connect implementation to targets
+    AuxData -.-> AUX
+    ISOCHRONES -.-> SCRAPE
+    FIXED_ISOCHRONES -.-> FIX
+    CONSOLIDATED -.-> CONS
+    GEOPARQUET -.-> MIGRATE
+    RENTALS -.-> RENTALS_TARGET
+    VIEWER -.-> VIEWER_TARGET
     
     %% Style definitions
     classDef dataFile fill:#c6dcff,stroke:#333,stroke-width:1px,color:#000
     classDef processNode fill:#d0ffd0,stroke:#333,stroke-width:1px,color:#000
     classDef outputNode fill:#ffddaa,stroke:#333,stroke-width:1px,color:#000
+    classDef makeTarget fill:#ffcccc,stroke:#333,stroke-width:1px,color:#000
     
     %% Apply styles
-    class POA,LGA,SAL,STOPS,POSTCODES,UNION,STOPS_UNION,STOPS_TIMES dataFile
+    class STOPS,POSTCODES,UNION,STOPS_UNION,STOPS_TIMES dataFile
     class ISOCHRONES,FIXED_ISOCHRONES,CONSOLIDATED,GEOPARQUET,RENTALS processNode
     class VIEWER outputNode
+    class AUX,FIX,SCRAPE,CONS,MIGRATE,RENTALS_TARGET,ALL,VIEWER_TARGET makeTarget
 ```
 
 This diagram shows how the various data files and processes are connected in the build system:
 
-1. **Auxiliary Data Files** - Shapefiles converted to GeoJSON format
-2. **Main Workflow** - Filtering public transport stops based on postcode boundaries
-3. **Isochrone Processing** - Fixing and consolidating the isochrones for visualization
+1. **Auxiliary Data Processing** - Creating and processing postcode boundaries and public transport stops
+2. **Isochrone Processing** - Fetching, fixing, and consolidating the isochrones for visualization
+3. **Makefile Targets** - The actual make targets that coordinate the workflow
 4. **Final Outputs** - The isochrone viewer and processed rental properties data
+
+The diagram shows both the conceptual data flow (solid arrows) as well as the relationship between implementation and Makefile targets (dotted arrows). The color coding distinguishes between:
+- Data files (light blue)
+- Process nodes (light green)
+- Output nodes (light orange)
+- Makefile targets (light red)
 
 Running `make all` will execute the entire workflow from beginning to end, while individual targets can be run separately as needed.

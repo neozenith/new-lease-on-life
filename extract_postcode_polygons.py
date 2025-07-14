@@ -64,10 +64,10 @@ def extract_postcode_polygons():
         "postcodes_with_trams_trains": gdf_postcodes_with_trams_trains
     }
 
-    # for b in BOUNDARIES:
-    #     b_gdf = gpd.read_file(b)
-    #     select__b_gdf = gpd.sjoin(b_gdf, gdf_stops_trams_trains, how="inner", predicate="intersects")
-    #     output_target_bases[b.stem.lower()] = select__b_gdf
+    for b in BOUNDARIES:
+        b_gdf = gpd.read_file(b)
+        select__b_gdf = gpd.sjoin(b_gdf, gdf_stops_trams_trains, how="inner", predicate="intersects")
+        output_target_bases[b.stem.lower()] = select__b_gdf
 
     for target, gdf in output_target_bases.items():
         selected_output_file = OUTPUT_ROOT / f"selected_{target}.geojson"

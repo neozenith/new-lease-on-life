@@ -300,7 +300,7 @@ def get_hull_color(row):
 gdf_ptv_hulls = gpd.read_parquet(PTV_HULLS)
 
 
-# gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
+gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
 print(f"{gdf_ptv_hulls.columns=}")
 print(f"{gdf_ptv_hulls['transit_time_minutes_nearest_tier'].unique()=}")
 gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['transit_time_minutes_nearest_tier'].isin([15, 30, 45, 60])]

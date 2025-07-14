@@ -27,6 +27,10 @@ GRAPHHOPPER_HOST = os.environ.get("GRAPHHOPPER_HOST", "https://graphhopper.com")
 ISOCHRONE_URL = f"{GRAPHHOPPER_HOST}/api/1/isochrone"
 TRANSPORT_MODES = ["foot", "car", "bike"]
 TRANSPORT_MODES = ["foot"]
+# TRANSPORT_MODES = ["foot", "bike"]
+PTV_TRANSPORT_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN"]
+# PTV_TRANSPORT_MODES = ["METRO TRAIN", "REGIONAL TRAIN"]
+# PTV_TRANSPORT_MODES = ["METRO TRAM"]
 TIME_LIMIT = 900
 BUCKETS = 3
 
@@ -63,6 +67,8 @@ def get_isochrone(lat, lon, mode, time_limit, buckets, api_key, max_retries=10, 
 def status():
     # Load stops
     gdf = gpd.read_file(STOPS_GEOJSON)
+    gdf = gdf[gdf["MODE"].isin(PTV_TRANSPORT_MODES)]
+    print(f"{gdf.columns=}")
     stops_count = len(gdf)
 
     expected_count = 0

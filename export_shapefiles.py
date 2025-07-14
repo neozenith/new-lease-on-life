@@ -154,6 +154,12 @@ def unzip_archive(
     if extract_to is None:
         extract_to = zip_path.parent / zip_path.stem
     logger.info(f"Unzipping {zip_path} to {extract_to}")
+
+    if extract_to.exists():
+        max_mtime = max(file.stat().st_mtime for file in extract_to.glob("**/*") if file.is_file())
+        if max_mtime > zip_path.stat().st_mtime:
+            logger.info(f"Skipping extraction, {extract_to} is up to date.")
+            return
     
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(extract_to)
