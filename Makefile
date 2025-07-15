@@ -1,4 +1,4 @@
-.PHONY: fix_geojson scrape_isochrones all consolidate_isochrones migrate_geojson_geoparquet rentals aux_data
+.PHONY: fix_geojson scrape_isochrones all consolidate_isochrones migrate_geojson_geoparquet rentals aux_data isochrones
 
 ######### SUPPORT FILES #########
 aux_data:
@@ -28,6 +28,7 @@ consolidate_isochrones: fix_geojson
 migrate_geojson_geoparquet: consolidate_isochrones
 	uv run migrate_geojson_geoparquet.py
 
+isochrones: aux_data consolidate_isochrones
 
 all: aux_data migrate_geojson_geoparquet rentals
 # This will run all the steps to prepare the data for the isochrone viewer

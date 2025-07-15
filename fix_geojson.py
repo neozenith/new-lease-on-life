@@ -1,4 +1,12 @@
 #!/usr/bin/env python
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#   "geopandas",
+#   "pyarrow",
+#   "shapely"
+# ]
+# ///
 """
 Convert non-standard GeoJSON format to standard FeatureCollection format.
 
@@ -12,6 +20,26 @@ import argparse
 import json
 import sys
 from pathlib import Path
+import re
+import geopandas as gpd
+
+TRANSPORT_MODES = ["foot", "car", "bike"]
+# TRANSPORT_MODES = ["foot"]
+# TRANSPORT_MODES = ["foot", "bike"]
+PTV_TRANSPORT_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN"]
+# PTV_TRANSPORT_MODES = ["METRO TRAIN", "REGIONAL TRAIN"]
+# PTV_TRANSPORT_MODES = ["METRO TRAM"]
+TIME_LIMIT = 900
+BUCKETS = 3
+
+
+STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
+OUTPUT_BASE = "data/geojson"
+STOPS = gpd.read_file(STOPS_GEOJSON)
+
+# Helper to normalise stop names for filenames
+def normalise_name(name):
+    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
 
 
 def fix_geojson(input_file, output_file=None, name=None):
@@ -26,19 +54,60 @@ def fix_geojson(input_file, output_file=None, name=None):
     Returns:
         bool: True if successful, False otherwise
     """
-    if output_file is not None:
-        # compare mtime of input and output file
-        input_path = Path(input_file)
-        output_path = Path(output_file)
-        if output_path.exists() and output_path.stat().st_mtime >= input_path.stat().st_mtime:
-            # print(f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing.")
-            return True
+    # Determine output path
+    if output_file is None:
+        output_file = input_file
+
+    # compare mtime of input and output file
+    input_path = Path(input_file)
+    output_path = Path(output_file)
+
+    if output_path.exists() and output_path.stat().st_mtime >= input_path.stat().st_mtime:
+        # print(f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing.")
+        return True
+
+    isochrone_mode = input_path.parts[2]
+    stop_id = input_path.stem.split("_")[1]
+    name_prefix_length = (len(input_path.stem.split("_")[0]) + len(input_path.stem.split("_")[1]) + 2)
+    normalised_stop_name = input_path.stem[name_prefix_length:]
+    stop = STOPS[STOPS["STOP_ID"] == stop_id]
+    
+    _props = {
+        "isochrone_mode": isochrone_mode,
+        "STOP_ID": stop_id,
+        "normalised_stop_name": normalised_stop_name,
+    }
+    if stop.shape[0] > 0:
+        
+        stop = stop.iloc[0]
+        
+        if normalise_name(stop.STOP_NAME) != normalised_stop_name:
+            print(f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}")
+            print(f"""
+                {isochrone_mode=}
+                {stop_id=}
+                {normalised_stop_name=}
+            """)
+            print(f"""
+                {stop.name=}
+                {stop.geometry=}
+                {stop.MODE=}
+                {stop.STOP_NAME=}
+                {stop.STOP_ID=}
+            """)
+        _props["STOP_NAME"] = stop.STOP_NAME
+        _props["MODE"] = stop.MODE
+    else:
+        print(f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. Using default properties.")
+
+
+    
 
     try:
         # Read the input file
-        input_filepath = Path(input_file)
-        data = json.loads(input_filepath.read_text(encoding="utf-8"))
-        name = input_filepath.stem
+        
+        data = json.loads(input_path.read_text(encoding="utf-8"))
+        name = input_path.stem
 
         # Create the proper FeatureCollection structure
         feature_collection = {
@@ -52,6 +121,16 @@ def fix_geojson(input_file, output_file=None, name=None):
         if "polygons" in data:
             # Copy features from polygons array
             feature_collection["features"] = data["polygons"]
+            for feature in feature_collection["features"]:
+                # Ensure each feature has the required properties
+                if "properties" not in feature:
+                    feature["properties"] = {}
+                # Add or update properties with isochrone info
+                feature["properties"].update(_props)
+                
+                if "bucket" in feature["properties"]:
+                    # Convert bucket to integer if it's a string
+                    feature["properties"]["walking_time_minutes"] = int(feature["properties"]["bucket"]) * 5 + 5
 
             # Copy any additional metadata
             if "info" in data:
@@ -60,17 +139,13 @@ def fix_geojson(input_file, output_file=None, name=None):
             print(f"Warning: No 'polygons' array found in {input_file}")
             return False
 
-        # Determine output path
-        if output_file is None:
-            output_file = input_file
+        
 
-        # Write the fixed GeoJSON to file
-        output_filepath = Path(output_file)
-        output_filepath.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-        output_filepath.write_text(json.dumps(feature_collection, indent=2))
+        output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+        output_path.write_text(json.dumps(feature_collection, indent=2))
 
-        print(f"Successfully converted {input_file} to standard GeoJSON format")
-        print(f"Saved to {output_file}")
+        # print(f"Successfully converted {input_file} to standard GeoJSON format")
+        # print(f"Saved to {output_file}")
         return True
 
     except json.JSONDecodeError as e:
@@ -164,7 +239,7 @@ def process_directory(input_dir, output_dir, validate=False):
         # Ensure the output directory exists
         out_file.parent.mkdir(parents=True, exist_ok=True)
 
-        print(f"Processing {geojson_file}...")
+        
         success = fix_geojson(str(geojson_file), str(out_file))
 
         if success:

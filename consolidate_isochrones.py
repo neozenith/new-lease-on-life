@@ -2,7 +2,8 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "geopandas"
+#   "geopandas",
+#   "pyarrow"
 # ]
 # ///
 
@@ -78,10 +79,11 @@ for mode in MODES.keys():
             by=["type", "minutes"], as_index=False
         )
 
-        isochrone_concatenated_path = pathlib.Path(
-            f"data/isochrones_concatenated/{mode}/{tier}.geojson"
-        )
+        
         isochrone_concatenated_path.parent.mkdir(parents=True, exist_ok=True)
         gdf_isochrones_concatenated[mode][tier].to_file(
             isochrone_concatenated_path, driver="GeoJSON"
+        )
+        gdf_isochrones_concatenated[mode][tier].to_parquet(
+            isochrone_concatenated_path.with_suffix(".geoparquet"), engine="pyarrow", index=False
         )

@@ -96,6 +96,8 @@ def min_max_normalize(series):
 
 
 def create_hulls(gdf):
+    output_path = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
+    
     gdf_ptv_stops = gdf
     # gdf_ptv_stops = gdf_ptv_stops.to_crs("EPSG:4326")
     # Make sure MODE is a column, not just in the index
@@ -113,19 +115,19 @@ def create_hulls(gdf):
     gdf_ptv_stops["transit_time_minutes_nearest_tier_z"] = (
         min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5 + 0.5
     )
-    print(gdf_ptv_stops["transit_time_minutes_nearest_tier_z"])
+    # print(gdf_ptv_stops["transit_time_minutes_nearest_tier_z"])
 
     # Group stops by MODE and transit_time_minutes_nearest_tier to create hulls
     hull_tiers = []
 
     # Process each mode
     for mode in PTV_MODES:
-        print(f"Processing mode: {mode}")
+        # print(f"Processing mode: {mode}")
         mode_stops = gdf_ptv_stops[gdf_ptv_stops["MODE"] == mode]
 
         # First, get all unique tiers and sort them since we will accumulate them
         all_tiers = sorted(mode_stops["transit_time_minutes_nearest_tier"].unique())
-        print(f"  Found tiers: {all_tiers}")
+        # print(f"  Found tiers: {all_tiers}")
 
         # Store hulls for each tier to build cumulative hulls
         tier_hulls = {}
@@ -141,9 +143,9 @@ def create_hulls(gdf):
                 )
                 continue
 
-            print(
-                f"  Creating cumulative hull for {mode} tier {tier} with {len(cumulative_stops)} points"
-            )
+            # print(
+            #     f"  Creating cumulative hull for {mode} tier {tier} with {len(cumulative_stops)} points"
+            # )
 
             # Convert the points to a MultiPoint object
             multi_point = cumulative_stops.geometry.union_all()
