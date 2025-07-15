@@ -32,3 +32,8 @@ migrate_geojson_geoparquet: consolidate_isochrones
 all: aux_data migrate_geojson_geoparquet rentals
 # This will run all the steps to prepare the data for the isochrone viewer
 	uv run isochrone_viewer.py
+
+fix:
+	uv run ruff format . --respect-gitignore
+	uv run ruff check --respect-gitignore --fix-only .
+	uv run ruff check --respect-gitignore --statistics .

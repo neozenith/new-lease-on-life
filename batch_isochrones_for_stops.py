@@ -8,16 +8,17 @@
 # ]
 # ///
 
-import os
-import requests
-import geopandas as gpd
+import argparse
 import json
+import os
 import re
+import sys
 import time
 from pathlib import Path
+
+import geopandas as gpd
+import requests
 from dotenv import load_dotenv
-import sys
-import argparse
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,9 +39,11 @@ BUCKETS = 3
 STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
 OUTPUT_BASE = "data/geojson"
 
+
 # Helper to normalise stop names for filenames
 def normalise_name(name):
     return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
+
 
 # Function to call GraphHopper Isochrone API
 def get_isochrone(lat, lon, mode, time_limit, buckets, api_key, max_retries=10, backoff_factor=5):
@@ -56,13 +59,16 @@ def get_isochrone(lat, lon, mode, time_limit, buckets, api_key, max_retries=10, 
         response = requests.get(base_url, params=params, timeout=30)
         if response.status_code == 429:
             print(response.text)
-            print(f"Rate limited (HTTP 429) on attempt {attempt+1}. Retrying in {delay} seconds...")
+            print(
+                f"Rate limited (HTTP 429) on attempt {attempt + 1}. Retrying in {delay} seconds..."
+            )
             time.sleep(delay)
             delay *= backoff_factor
             continue
         response.raise_for_status()
         return response.json()
     raise Exception(f"Failed after {max_retries} retries due to rate limiting.")
+
 
 def status():
     # Load stops
@@ -84,10 +90,12 @@ def status():
             expected_count += 1
             if out_file.exists():
                 cached_count += 1
-    print(f"Found {stops_count} stops, expected {expected_count} isochrones, {cached_count} cached files and {expected_count - cached_count} remaining. {cached_count / expected_count * 100.0:.2f}%")
+    print(
+        f"Found {stops_count} stops, expected {expected_count} isochrones, {cached_count} cached files and {expected_count - cached_count} remaining. {cached_count / expected_count * 100.0:.2f}%"
+    )
+
 
 def scrape(limit):
-    
     # Load stops
     gdf = gpd.read_file(STOPS_GEOJSON)
     stops_count = len(gdf)
@@ -109,18 +117,23 @@ def scrape(limit):
                     print(f"Reached limit of {limit} isochrones, stopping.")
                     return
                 result = get_isochrone(lat, lon, mode, TIME_LIMIT, BUCKETS, GRAPHHOPPER_API_KEY)
-                out_file.write_text(json.dumps(result, indent=2))                
+                out_file.write_text(json.dumps(result, indent=2))
                 print(f"✅ Saved {mode} {stop_id} ({stop_name}) to {out_file}")
                 count += 1
                 time.sleep(3)  # Avoid hitting API rate limits
             except Exception as e:
                 print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: {e}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Batch process isochrones for public transport stops")
-    parser.add_argument("--status", action='store_true', help="Perform only a status check")
-    parser.add_argument("--limit", default=170, type=int, help="Specify the number of isochrones to scrape")
-    
+    parser = argparse.ArgumentParser(
+        description="Batch process isochrones for public transport stops"
+    )
+    parser.add_argument("--status", action="store_true", help="Perform only a status check")
+    parser.add_argument(
+        "--limit", default=170, type=int, help="Specify the number of isochrones to scrape"
+    )
+
     args = parser.parse_args()
 
     if args.status:
