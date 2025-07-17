@@ -31,7 +31,21 @@ gdf_isochrones_concatenated: dict[str, dict[str, gpd.GeoDataFrame]] = {
 
 print(f"Consolidating isochrones from {len(MODES)} modes: {', '.join(MODES.keys())}")
 for mode, modality_isochrone_path in MODES.items():
-    print(f"Processing isochrones for mode: {mode} from {modality_isochrone_path}")
+    input_files = list(pathlib.Path(modality_isochrone_path).rglob("*.geojson"))
+    print(f"Processing isochrones for mode: {mode} from {modality_isochrone_path} {len(input_files)=}")
+    # Most recently modified input file
+    max_mtime = max(
+        f.stat().st_mtime for f in pathlib.Path(modality_isochrone_path).rglob("*.geojson")
+    )
+    # Least recently updated outputfile
+    output_files = pathlib.Path(f"data/isochrones_concatenated/{mode}/")
+    min_output_mtime = min(
+        f.stat().st_mtime for f in output_files.rglob("*.geojson")
+    )
+
+    if max_mtime < min_output_mtime:
+        continue  # Skip if no new files are found
+
     for f in pathlib.Path(modality_isochrone_path).rglob("*.geojson"):
         gdf = gpd.read_file(str(f))
         gdf = gdf.to_crs("EPSG:4326")  # Ensure CRS is WGS84 for web compatibility
@@ -49,6 +63,9 @@ for mode in MODES.keys():
     for tier in ISOCHRONE_TIERS:
         print(f"=========={mode} {tier} [{len(gdf_isochrones[mode][tier])}]==========")
 
+        if len(gdf_isochrones[mode][tier]) == 0:
+            continue  # Skip if no isochrones found to process for this mode and tier
+        
         max_input_mtime = max(
             [
                 pathlib.Path(g["source_file"].values[0]).stat().st_mtime

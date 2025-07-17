@@ -3,9 +3,9 @@
 ######### SUPPORT FILES #########
 aux_data:
 #	uv run export_shapefiles.py
-	uv run extract_postcode_polygons.py
-	uv run extract_stops_within_union.py
-	uv run stops_by_transit_time.py
+	time uv run extract_postcode_polygons.py
+	time uv run extract_stops_within_union.py
+	time uv run stops_by_transit_time.py
 
 ######### API FETCHING #########
 scrape_isochrones:
@@ -16,17 +16,17 @@ rentals:
 
 ######### DATA TIDY UP #########
 fix_geojson: scrape_isochrones
-	uv run fix_geojson.py data/geojson/foot/ -o data/geojson_fixed/foot/
-	uv run fix_geojson.py data/geojson/bike/ -o data/geojson_fixed/bike/
-	uv run fix_geojson.py data/geojson/car/ -o data/geojson_fixed/car/
+	time uv run fix_geojson.py data/geojson/foot/ -o data/geojson_fixed/foot/
+	time uv run fix_geojson.py data/geojson/bike/ -o data/geojson_fixed/bike/
+	time uv run fix_geojson.py data/geojson/car/ -o data/geojson_fixed/car/
 
 
 # create the data/isochrones_concatenated/**/*.geojson
 consolidate_isochrones: fix_geojson
-	uv run consolidate_isochrones.py
+	time uv run consolidate_isochrones.py
 
 migrate_geojson_geoparquet: consolidate_isochrones
-	uv run migrate_geojson_geoparquet.py
+	time uv run migrate_geojson_geoparquet.py
 
 isochrones: aux_data consolidate_isochrones
 
