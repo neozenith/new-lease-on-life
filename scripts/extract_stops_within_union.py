@@ -3,27 +3,34 @@
 # dependencies = [
 #   "geopandas",
 #   "pyarrow",
-#   "shapely"
+#   "shapely",
+#   "requests"
 # ]
 # ///
 
 import pathlib
-
+from pathlib import Path
 import geopandas as gpd
 
-# File paths
-UNIONED_GEOJSON = "data/geojson/ptv/boundaries/unioned_postcodes.geojson"
-UNIONED_GEOJSON = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams.geojson"
-UNIONED_GEOJSON = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams_trains.geojson"
+from utils import dirty, save_geodataframe
 
-STOPS_GEOJSON = "data/public_transport_stops.geojson"
+SCRIPT_DIR = Path(__file__).parent.resolve()
 
-OUTPUT_STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
+# INPUTS
+UNIONED_GEOJSON = SCRIPT_DIR.parent / "data/geojson/ptv/boundaries/unioned_postcodes_with_trams_trains.parquet"
+STOPS_GEOJSON = SCRIPT_DIR.parent / "data/public_transport_stops.parquet"
+
+# OUTPUTS
+OUTPUT_STOPS_GEOJSON = SCRIPT_DIR.parent / "data/geojson/ptv/stops_within_union.geojson"
 
 
 def extract_stops_within_union():
+    if not dirty(OUTPUT_STOPS_GEOJSON, [UNIONED_GEOJSON, STOPS_GEOJSON]):
+        print(f"{OUTPUT_STOPS_GEOJSON} is up to date. Skipping extraction.")
+        return
+    
     # Load the unioned postcode polygon
-    unioned_gdf = gpd.read_file(UNIONED_GEOJSON)
+    unioned_gdf = gpd.read_parquet(UNIONED_GEOJSON)
     unioned_geom = unioned_gdf.union_all()
 
     # Load the public transport stops
@@ -44,7 +51,7 @@ def extract_stops_within_union():
         # stops_within = stops_within[stops_within["MODE"] != "METRO TRAM"]
         # stops_within = stops_within[stops_within["MODE"] != "REGIONAL TRAIN"]
         # stops_within = stops_within[stops_within["MODE"] != "METRO TRAIN"]
-        stops_within = stops_within[stops_within["MODE"] != "INTERSTATE TRAIN"]
+        # stops_within = stops_within[stops_within["MODE"] != "INTERSTATE TRAIN"]
         stops_within = stops_within[
             ~stops_within["STOP_NAME"].str.contains("Rail Replacement Bus Stop")
         ]
@@ -53,12 +60,8 @@ def extract_stops_within_union():
     if "STOP_NAME" in stops_within.columns:
         stops_within = stops_within.groupby("STOP_NAME", as_index=False).first()
 
-    # Write the subset to GeoJSON
-    pathlib.Path(OUTPUT_STOPS_GEOJSON).parent.mkdir(parents=True, exist_ok=True)
-    stops_within.to_file(OUTPUT_STOPS_GEOJSON, driver="GeoJSON")
-    stops_within.to_parquet(
-        OUTPUT_STOPS_GEOJSON.replace(".geojson", ".parquet"), engine="pyarrow", index=False
-    )
+    # Save the filtered stops to the output GeoJSON file
+    save_geodataframe(stops_within, OUTPUT_STOPS_GEOJSON)
 
     print(stops_within["MODE"].unique())
     print(f"Wrote {len(stops_within)} unique stops to {OUTPUT_STOPS_GEOJSON}")
