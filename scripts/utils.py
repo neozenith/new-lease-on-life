@@ -43,7 +43,7 @@ MAPBOX_COUNTOUR_TIMES = [5, 10, 15]  # Minutes for Mapbox isochrones
 
 STOPS_GEOJSON = SCRIPT_DIR.parent / "data/public_transport_stops.geojson"
 
-OUTPUT_BASE = SCRIPT_DIR.parent / "data/geojson"
+OUTPUT_BASE = SCRIPT_DIR.parent / "data/isochrone_cache"
 
 
 def min_max_normalize(series):

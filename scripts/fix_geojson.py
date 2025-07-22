@@ -4,7 +4,8 @@
 # dependencies = [
 #   "geopandas",
 #   "pyarrow",
-#   "shapely"
+#   "shapely",
+#   "requests",
 # ]
 # ///
 """
@@ -18,64 +19,20 @@ Can process single files or recursively iterate through directories.
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
-import re
+
 import geopandas as gpd
 
+from utils import dirty, load_stops, normalise_name, PTV_TRANSPORT_MODES, OUTPUT_BASE, TRANSPORT_MODES, MAPBOX_PROFILE_MAPPING
 
-TRANSPORT_MODES = ["foot", "bike", "car"]
-
-MAPBOX_PROFILE_MAPPING = {
-    "foot": "walking",
-    "bike": "cycling",
-    "car": "driving",
-}
-PTV_TRANSPORT_MODES = ["INTERSTATE TRAIN", "REGIONAL TRAIN", "METRO TRAIN", "METRO TRAM"]
-TIME_LIMIT = 900
-BUCKETS = 3
-MAPBOX_COUNTOUR_TIMES = [5, 10, 15]  # Minutes for Mapbox isochrones
+SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
-STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
-STOPS_GEOJSON = "data/public_transport_stops.geojson"
-
-OUTPUT_BASE = "data/geojson"
-
-
-
-# Helper to normalise stop names for filenames
-def normalise_name(name):
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-def load_stops(filter_modes: list[str] | None = None) -> gpd.GeoDataFrame:
-    """Load stops from GeoJSON file and optionally filter by transport modes.
-    
-    Args:
-        filter_modes: List of transport modes to filter by (e.g., PTV_TRANSPORT_MODES)
-                     If None, returns all stops.
-    
-    Returns:
-        GeoDataFrame of stops
-    """
-    gdf = gpd.read_file(STOPS_GEOJSON)
-    gdf = gdf[
-        ~gdf["STOP_NAME"].str.contains("Rail Replacement Bus Stop")
-    ]
-    before = len(gdf)
-    gdf = gdf.groupby("STOP_NAME", as_index=False).first() # Consolidate duplicate stops that are effectively the same stop
-    after = len(gdf)
-    
-    # Sort by custom order defined in PTV_TRANSPORT_MODES
-    mode_order = {mode: idx for idx, mode in enumerate(PTV_TRANSPORT_MODES)}
-    gdf = gdf.sort_values("MODE", key=lambda x: x.map(mode_order))
-
-    print(f"Filtered stops: {before} -> {after} unique stops")
-    if filter_modes:
-        gdf = gdf[gdf["MODE"].isin(filter_modes)]
-    return gdf
-
-def fix_geojson(stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | None = None, name=None):
+def fix_geojson(
+    stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | None = None, name=None
+):
     """
     Fix a non-standard GeoJSON file by converting it to a proper FeatureCollection.
 
@@ -95,29 +52,28 @@ def fix_geojson(stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | N
     input_path = Path(input_file)
     output_path = Path(output_file)
 
-    if output_path.exists() and output_path.stat().st_mtime >= input_path.stat().st_mtime:
-        # print(f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing.")
+    if not dirty(output_path, input_path):
+        print(f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing.")
         return True
-
-    
 
     isochrone_mode = input_path.parts[2]
     stop_id = input_path.stem.split("_")[1]
-    name_prefix_length = (len(input_path.stem.split("_")[0]) + len(input_path.stem.split("_")[1]) + 2)
+    name_prefix_length = len(input_path.stem.split("_")[0]) + len(input_path.stem.split("_")[1]) + 2
     normalised_stop_name = input_path.stem[name_prefix_length:]
     stop = stops[stops["STOP_ID"] == stop_id]
-    
+
     _props = {
         "isochrone_mode": isochrone_mode,
         "STOP_ID": stop_id,
         "normalised_stop_name": normalised_stop_name,
     }
     if stop.shape[0] > 0:
-        
         stop = stop.iloc[0]
-        
+
         if normalise_name(stop.STOP_NAME) != normalised_stop_name:
-            print(f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}")
+            print(
+                f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}"
+            )
             print(f"""
                 {isochrone_mode=}
                 {stop_id=}
@@ -133,10 +89,9 @@ def fix_geojson(stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | N
         _props["STOP_NAME"] = stop.STOP_NAME
         _props["MODE"] = stop.MODE
     else:
-        print(f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. Using default properties.")
-
-
-    
+        print(
+            f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. Using default properties."
+        )
 
     try:
         # Read the input file
@@ -164,10 +119,12 @@ def fix_geojson(stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | N
                     feature["properties"] = {}
                 # Add or update properties with isochrone info
                 feature["properties"].update(_props)
-                
+
                 if "bucket" in feature["properties"]:
                     # Convert bucket to integer if it's a string
-                    feature["properties"]["contour_time_minutes"] = int(feature["properties"]["bucket"]) * 5 + 5
+                    feature["properties"]["contour_time_minutes"] = (
+                        int(feature["properties"]["bucket"]) * 5 + 5
+                    )
 
             # Copy any additional metadata
             if "info" in data:
@@ -180,29 +137,33 @@ def fix_geojson(stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | N
                 if "properties" not in feature:
                     feature["properties"] = {}
                 # Add or update properties with isochrone info
-                key_to_drop = ["fill-opacity","fillColor","opacity","fill","fillOpacity","color"]
+                key_to_drop = [
+                    "fill-opacity",
+                    "fillColor",
+                    "opacity",
+                    "fill",
+                    "fillOpacity",
+                    "color",
+                ]
                 for key in key_to_drop:
                     if key in feature["properties"]:
-                        del feature["properties"][key]       
-        
+                        del feature["properties"][key]
+
                 if "contour" in feature["properties"]:
-                    feature["properties"]["contour_time_minutes"] = int(feature["properties"]["contour"])
+                    feature["properties"]["contour_time_minutes"] = int(
+                        feature["properties"]["contour"]
+                    )
                 feature["properties"].update(_props)
 
             # MapBox doesn't include metadata in the features, so we add it here
             feature_collection["info"] = {
-                "copyrights": [
-                "MapBox IsoChrone API",
-                "OpenStreetMap contributors"
-                ],
+                "copyrights": ["MapBox IsoChrone API", "OpenStreetMap contributors"],
                 "collected": input_path.stat().st_mtime,
                 "source": "MapBox IsoChrone API",
             }
         else:
             print(f"Warning: No 'polygons' array found in {input_file}")
             return False
-
-        
 
         output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
         output_path.write_text(json.dumps(feature_collection, indent=2))
@@ -288,6 +249,7 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
 
     total_files = 0
     successful_files = 0
+    cached_files = 0
 
     # Find all GeoJSON files in the directory and its subdirectories
     for geojson_file in input_path.glob("**/*.geojson"):
@@ -301,6 +263,10 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
 
         # Ensure the output directory exists
         out_file.parent.mkdir(parents=True, exist_ok=True)
+        if out_file.exists():
+            cached_files += 1
+            print(f"Skipping {geojson_file} as it already exists at {out_file}")
+            continue
 
         success = fix_geojson(stops, geojson_file, out_file)
 
@@ -313,7 +279,7 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
                 else:
                     print(f"  Validation failed: {message}")
 
-    return total_files, successful_files
+    return total_files, successful_files, cached_files
 
 
 def main():
@@ -341,14 +307,18 @@ def main():
 
     stops = load_stops(PTV_TRANSPORT_MODES)
     # Check if input is a directory
-    if input_path.is_dir():
+    if input_path.is_dir(): 
         if args.output is None:
             print("Error: When processing a directory, you must specify an output directory")
             return 1
 
         print(f"Processing directory {args.input} recursively...")
-        total, successful = process_directory(stops, Path(args.input), Path(args.output), args.validate)
+        total, successful, cached_files = process_directory(
+            stops, Path(args.input), Path(args.output), args.validate
+        )
         print(f"Processed {successful}/{total} files successfully")
+        if cached_files > 0:
+            print(f"Skipped {cached_files} files that were already cached")
         return 0 if successful == total and total > 0 else 1
 
     # Process single file

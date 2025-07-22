@@ -16,10 +16,7 @@ rentals:
 
 ######### DATA TIDY UP #########
 fix_geojson: scrape_isochrones
-	time uv run fix_geojson.py data/geojson/foot/ -o data/geojson_fixed/foot/
-	time uv run fix_geojson.py data/geojson/bike/ -o data/geojson_fixed/bike/
-	time uv run fix_geojson.py data/geojson/car/ -o data/geojson_fixed/car/
-
+	time uv run scripts/fix_geojson.py data/isochrone_cache/ -o data/geojson_fixed/
 
 # create the data/isochrones_concatenated/**/*.geojson
 consolidate_isochrones: fix_geojson
