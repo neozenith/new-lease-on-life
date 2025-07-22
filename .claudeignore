@@ -1,0 +1,52 @@
+# Claude Code Ignore File
+
+# Large data directories
+data/
+data/geojson/
+data/geojson_fixed/
+data/isochrones_concatenated/
+data/transit_time_cache/
+data/originals/
+data/originals_converted/
+
+# Generated files
+*.geoparquet
+*.geojson
+!candidates.yml
+!known_commutes.yml
+!env.example
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.cache/
+.pytest_cache/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Documentation build
+docs/_build/
