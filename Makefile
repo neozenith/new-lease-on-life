@@ -23,7 +23,7 @@ consolidate_isochrones: fix_geojson
 	time uv run consolidate_isochrones.py
 
 migrate_geojson_geoparquet: consolidate_isochrones
-	time uv run migrate_geojson_geoparquet.py
+	time uv run scripts/migrate_geojson_geoparquet.py
 
 isochrones: aux_data consolidate_isochrones
 
