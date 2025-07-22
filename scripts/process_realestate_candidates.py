@@ -50,15 +50,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Get the path of this script
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
 # Constants
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
-CANDIDATES_YAML = "candidates.yml"
-COMMUTES_YAML = "known_commutes.yml"
-OUTPUT_DIR = "data/candidate_real_estate"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+CANDIDATES_YAML = SCRIPT_DIR.parent / "candidates.yml"
+COMMUTES_YAML = SCRIPT_DIR.parent / "known_commutes.yml"
+OUTPUT_DIR = SCRIPT_DIR.parent / "data/candidate_real_estate"
 
 # Ensure output directory exists
-Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class RealEstateProcessor:
