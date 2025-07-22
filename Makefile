@@ -2,7 +2,7 @@
 
 ######### SUPPORT FILES #########
 aux_data:
-#	uv run export_shapefiles.py
+#	uv run scripts/export_shapefiles.py
 	time uv run extract_postcode_polygons.py
 	time uv run extract_stops_within_union.py
 	time uv run stops_by_transit_time.py
@@ -12,7 +12,7 @@ scrape_isochrones:
 	uv run batch_isochrones_for_stops.py --status
 
 rentals: 
-	uv run process_realestate_candidates.py
+	uv run scripts/process_realestate_candidates.py
 
 ######### DATA TIDY UP #########
 fix_geojson: scrape_isochrones
