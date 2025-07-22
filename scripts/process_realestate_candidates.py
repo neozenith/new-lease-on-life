@@ -20,7 +20,7 @@ This script:
 # ]
 # ///
 
-# TODO: for each stop calculate the commute time to Southern cross station
+# for each stop calculate the commute time to Southern cross station
 # and create a modified stops dataset to visualise the commute isochrones.
 
 import asyncio

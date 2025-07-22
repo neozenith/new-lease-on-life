@@ -8,6 +8,7 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 # requires-python = ">=3.12"
 # dependencies = [
 #   "geopandas>=0.14.0",
+#   "requests",
 #   "python-dotenv>=1.0.0",
 #   "tqdm>=4.66.1",
 #   "pyarrow",
@@ -20,6 +21,8 @@ from pathlib import Path
 import geopandas as gpd
 from dotenv import load_dotenv
 from tqdm import tqdm
+
+from utils import unzip_archive, dirty
 
 # Load environment variables from .env file
 load_dotenv()
@@ -91,7 +94,7 @@ def export_shapefile_to_geojson(
         output_file = output_dir / relative_shapefile_path / f"{shapefile_path.stem}.geojson"
 
         # Guard condition to skip if up to date
-        if output_file.exists() and output_file.stat().st_mtime > shapefile_path.stat().st_mtime:
+        if not dirty(output_file, shapefile_path):
             logger.info(f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb")
             logger.info(f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb")
             geoparquet_path = output_file.with_suffix(".parquet")
@@ -147,31 +150,6 @@ def export_shapefile_to_geojson(
     except Exception as e:
         logger.error(f"Error exporting shapefile {shapefile_path}: {str(e)}")
         raise
-
-
-def unzip_archive(zip_path: Path, extract_to: Path | None = None) -> None:
-    """
-    Unzip a ZIP archive to the specified directory.
-
-    Args:
-        zip_path: Path to the ZIP file
-        extract_to: Directory to extract files to
-    """
-
-    if extract_to is None:
-        extract_to = zip_path.parent / zip_path.stem
-    logger.info(f"Unzipping {zip_path} to {extract_to}")
-
-    if extract_to.exists():
-        max_mtime = max(file.stat().st_mtime for file in extract_to.glob("**/*") if file.is_file())
-        if max_mtime > zip_path.stat().st_mtime:
-            logger.info(f"Skipping extraction, {extract_to} is up to date.")
-            return
-
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-        zip_ref.extractall(extract_to)
-
-    logger.info(f"Unzipped {zip_path} successfully")
 
 
 def process_shapefiles(
