@@ -20,7 +20,7 @@ fix_geojson: scrape_isochrones
 
 # create the data/isochrones_concatenated/**/*.geojson
 consolidate_isochrones: fix_geojson
-	time uv run consolidate_isochrones.py
+	time uv run scripts/consolidate_isochrones.py
 
 migrate_geojson_geoparquet: consolidate_isochrones
 	time uv run scripts/migrate_geojson_geoparquet.py

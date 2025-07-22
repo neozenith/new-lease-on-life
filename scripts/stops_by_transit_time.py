@@ -33,7 +33,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 HULL_TIER_SIZE = 5  # minutes
-
+CONCAVE_HULL_RATIO = 0.6  # Ratio for concave hull generation
 # Constants
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 SOUTHERN_CROSS = "Southern Cross Station, Melbourne, Australia"
@@ -150,10 +150,15 @@ def create_hulls(gdf):
             # )
 
             # Convert the points to a MultiPoint object
-            multi_point = cumulative_stops.geometry.union_all()
-
+            
+            multi_point = gpd.GeoSeries(cumulative_stops["geometry"].union_all())
+            
             # Create a convex hull from all points (the rubber band effect)
-            hull = multi_point.convex_hull
+            hull = multi_point.concave_hull(
+                ratio=CONCAVE_HULL_RATIO,  
+                allow_holes=False,  # Minimum points to form a hull
+            )
+            
 
             # Store this tier's hull
             tier_hulls[tier] = hull
@@ -168,7 +173,7 @@ def create_hulls(gdf):
 
             # Create a GeoDataFrame for this hull
             hull_gdf = gpd.GeoDataFrame(
-                geometry=[hull],
+                geometry=hull.geometry,
                 data={
                     "MODE": [mode],
                     "transit_time_minutes_nearest_tier": [tier],
@@ -242,11 +247,17 @@ def main():
                 if distance_km is not None:
                     transit_times["transit_distance_km"] = round(float(distance_km), 2)
 
+            tier_size = float(HULL_TIER_SIZE)
+            # tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
+            transit_times["transit_time_minutes_nearest_tier"] = round(
+                round(float(transit_times["transit_time_minutes"]), 1) / tier_size
+            ) * tier_size
+
             # Add stop with transit data - only minutes and kilometers
             stop_record = stop.copy()
             stop_record["transit_time_minutes"] = transit_times.get("transit_time_minutes")
             stop_record["transit_distance_km"] = transit_times.get("transit_distance_km")
-
+            stop_record["transit_time_minutes_nearest_tier"] = transit_times.get("transit_time_minutes_nearest_tier")
             output.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
             output.write_text(json.dumps(transit_times))
 

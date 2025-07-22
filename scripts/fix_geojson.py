@@ -55,44 +55,45 @@ def fix_geojson(
     input_path = Path(input_file)
     output_path = Path(output_file)
 
-    if not dirty(output_path, input_path):
-        print(
-            f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing."
-        )
-        return True
+    # if not dirty(output_path, input_path):
+    #     print(
+    #         f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing."
+    #     )
+    #     return True
 
     isochrone_mode = input_path.parts[2]
     stop_id = input_path.stem.split("_")[1]
     name_prefix_length = len(input_path.stem.split("_")[0]) + len(input_path.stem.split("_")[1]) + 2
     normalised_stop_name = input_path.stem[name_prefix_length:]
     stop = stops[stops["STOP_ID"] == stop_id]
-
+    row_count_for_stop = stop.shape[0]
     _props = {
         "isochrone_mode": isochrone_mode,
         "STOP_ID": stop_id,
         "normalised_stop_name": normalised_stop_name,
     }
-    if stop.shape[0] > 0:
+    if row_count_for_stop > 0:
         stop = stop.iloc[0]
-
-        if normalise_name(stop.STOP_NAME) != normalised_stop_name:
-            print(
-                f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}"
-            )
-            print(f"""
-                {isochrone_mode=}
-                {stop_id=}
-                {normalised_stop_name=}
-            """)
-            print(f"""
-                {stop.name=}
-                {stop.geometry=}
-                {stop.MODE=}
-                {stop.STOP_NAME=}
-                {stop.STOP_ID=}
-            """)
-        _props["STOP_NAME"] = stop.STOP_NAME
         _props["MODE"] = stop.MODE
+
+
+        # if normalise_name(stop.STOP_NAME) != normalised_stop_name:
+        #     print(
+        #         f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}"
+        #     )
+        #     print(f"""
+        #         {isochrone_mode=}
+        #         {stop_id=}
+        #         {normalised_stop_name=}
+        #     """)
+        #     print(f"""
+        #         {stop.name=}
+        #         {stop.geometry=}
+        #         {stop.MODE=}
+        #         {stop.STOP_NAME=}
+        #         {stop.STOP_ID=}
+        #     """)
+        _props["STOP_NAME"] = stop.STOP_NAME
     else:
         print(
             f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. Using default properties."
@@ -268,10 +269,10 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
 
         # Ensure the output directory exists
         out_file.parent.mkdir(parents=True, exist_ok=True)
-        if out_file.exists():
-            cached_files += 1
-            print(f"Skipping {geojson_file} as it already exists at {out_file}")
-            continue
+        # if out_file.exists():
+        #     cached_files += 1
+        #     print(f"Skipping {geojson_file} as it already exists at {out_file}")
+        #     continue
 
         success = fix_geojson(stops, geojson_file, out_file)
 

@@ -99,16 +99,37 @@ ISOCHRONE_OPACITY = 0.1  # Opacity for isochrones
 ISOCHRONE_LINE_OPACITY = 1.0
 
 
-PTV_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
+PTV_MODES = [
+    "METRO TRAM",
+    "METRO TRAIN",
+    "REGIONAL TRAIN",
+    "INTERSTATE TRAIN",
+    "REGIONAL BUS",
+    "REGIONAL COACH",
+    "METRO BUS",
+    "SKYBUS",
+]
 MODES = {"car": ISOCHRONE_CAR, "bike": ISOCHRONE_BIKE, "foot": ISOCHRONE_FOOT}
-ALL_MODES = ["METRO TRAM", "bike", "METRO TRAIN", "car", "REGIONAL TRAIN", "foot", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
+ALL_MODES = [
+    "METRO TRAM",
+    "bike",
+    "METRO TRAIN",
+    "car",
+    "REGIONAL TRAIN",
+    "foot",
+    "INTERSTATE TRAIN",
+    "REGIONAL BUS",
+    "REGIONAL COACH",
+    "METRO BUS",
+    "SKYBUS",
+]
 ISOCHRONE_TIERS = ["15", "10", "5"]
 
 # Give all modes of transport, either personal or public transport, a unique hue in the HSV color space.
 # This allows us to easily distinguish between them on the map.
 float_hue_offset = 0.1
 HUE_FOR_MODE = {
-    mode: (i / len(ALL_MODES) + float_hue_offset) % 1.0 for i, mode in enumerate(ALL_MODES)
+    mode: (float(i) / float(len(ALL_MODES)) + float_hue_offset) % 1.0 for i, mode in enumerate(ALL_MODES)
 }
 print(f"HUE_FOR_MODE: {HUE_FOR_MODE}")
 isochrone_colors = {}
@@ -116,7 +137,7 @@ isochrone_colors = {}
 for m, mode in enumerate(MODES.keys()):
     float_hue = HUE_FOR_MODE[mode]
     for t, tier in enumerate(ISOCHRONE_TIERS):
-        float_saturation = 0.5 + (0.1 * t)  # Saturation increases with tier
+        float_saturation = 0.2 + (0.1 * t)  # Saturation increases with tier
         isochrone_colors[f"{mode}-{tier}"] = rgba_float_to_255(
             hsv_to_rgb(float_hue, float_saturation, 0.8, ISOCHRONE_OPACITY)
         )
@@ -215,13 +236,13 @@ print(f"Initial PTV lines, total: {len(gdf_ptv_lines)}")
 gdf_ptv_lines = gdf_ptv_lines[
     ~gdf_ptv_lines["MODE"].isin(
         [
-            "METRO BUS", 
-            "REGIONAL BUS", 
-            "REGIONAL COACH", 
-            "SKYBUS", 
-            # "REGIONAL TRAIN", 
-            "METRO TRAIN", 
-            "METRO TRAM"
+            "METRO BUS",
+            "REGIONAL BUS",
+            "REGIONAL COACH",
+            "SKYBUS",
+            # "REGIONAL TRAIN",
+            # "METRO TRAIN",
+            # "METRO TRAM",
         ]
     )
 ]
@@ -257,7 +278,39 @@ gdf_ptv_stops = gpd.read_parquet(PTV_STOPS)
 # Make sure MODE is a column, not just in the index
 if "MODE" in gdf_ptv_stops.index.names and "MODE" not in gdf_ptv_stops.columns:
     gdf_ptv_stops = gdf_ptv_stops.reset_index()
-gdf_ptv_stops["color"] = gdf_ptv_stops.apply(lambda row: ptv_color_lookup.get(row["MODE"]), axis=1)
+
+def get_stop_colour(row):
+    mode = row["MODE"]
+    tier = row["transit_time_minutes_nearest_tier"]
+    tier = 0 if tier is None else tier
+
+    # Use the specific hue for this mode from HUE_FOR_MODE
+    mode_hue = HUE_FOR_MODE[mode]
+
+    # Adjust saturation and value based on transit time
+    # Higher transit times (further from city) will have lower saturation and value
+    # This creates a visual gradient where closer = more vibrant, further = more faded
+
+    # Map tier to saturation (0.3-0.9 range)
+    # Lower tiers (closer to city) have higher saturation
+    max_tier = 60  # Assuming 90 minutes is our maximum tier
+    saturation = 1.0 - (0.4 * (min(tier, max_tier) / max_tier))
+
+    # Map tier to value (0.5-0.9 range)
+    # Lower tiers (closer to city) have higher value (brightness)
+    value = 0.9 - (0.4 * (min(tier, max_tier) / max_tier))
+
+    # Create the color with mode-specific hue but time-based saturation and value
+    return rgba_float_to_255(
+        hsv_to_rgb(
+            mode_hue,  # Mode-specific hue
+            saturation,  # Time-based saturation
+            value,  # Time-based value
+            1.0 * saturation,  # link opacity to saturation too
+        )
+    )
+
+gdf_ptv_stops["color"] = gdf_ptv_stops.apply(get_stop_colour, axis=1)
 
 gdf_ptv_stops = gdf_ptv_stops[
     gdf_ptv_stops["MODE"].isin(["REGIONAL TRAIN", "METRO TRAIN", "METRO TRAM"])
@@ -271,7 +324,7 @@ def get_hull_color(row):
     tier = row["transit_time_minutes_nearest_tier"]
 
     # Use the specific hue for this mode from HUE_FOR_MODE
-    mode_hue = HUE_FOR_MODE[mode] + 0.12
+    mode_hue = HUE_FOR_MODE[mode] + 0.02
 
     # Adjust saturation and value based on transit time
     # Higher transit times (further from city) will have lower saturation and value
@@ -279,8 +332,8 @@ def get_hull_color(row):
 
     # Map tier to saturation (0.3-0.9 range)
     # Lower tiers (closer to city) have higher saturation
-    max_tier = 90  # Assuming 90 minutes is our maximum tier
-    saturation = 0.9 - (0.6 * (min(tier, max_tier) / max_tier))
+    max_tier = 60  # Assuming 90 minutes is our maximum tier
+    saturation = 1.0 - (0.8 * (min(tier, max_tier) / max_tier))
 
     # Map tier to value (0.5-0.9 range)
     # Lower tiers (closer to city) have higher value (brightness)
@@ -292,7 +345,7 @@ def get_hull_color(row):
             mode_hue,  # Mode-specific hue
             saturation,  # Time-based saturation
             value,  # Time-based value
-            1.0 * saturation,  # Consistent opacity
+            1.0 * saturation,  # link opacity to saturation too
         )
     )
 
@@ -393,7 +446,7 @@ for mode in MODES.keys():
 
 LAYERS.extend(visible_isochrone_layers)
 
-# Add the PTV lines layer to show transit routes
+# # Add the PTV lines layer to show transit routes
 LAYERS.append(ptv_lines_layer)
 
 # Add the commute time hull polygons first (will be below stops)
@@ -425,6 +478,7 @@ for rental_candidate in pathlib.Path("data/candidate_real_estate/").glob("*.geoj
     )
     # LAYERS.append(rental_layer)
 
+
 def app_for(layers: list[pdk.Layer]) -> pn.Column:
     # Bounding box coordinates
     TOP_LEFT = (-37.713453, 144.895298)  # (lat, lon)
@@ -438,7 +492,13 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
     map_style = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
     INITIAL_VIEW_STATE = pdk.ViewState(
-        bearing=0, latitude=center_lat, longitude=center_lon, maxZoom=15, minZoom=5, pitch=0, zoom=11
+        bearing=0,
+        latitude=center_lat,
+        longitude=center_lon,
+        maxZoom=15,
+        minZoom=5,
+        pitch=0,
+        zoom=11,
     )
 
     deck_spec = pdk.Deck(
@@ -454,7 +514,6 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
         },
     )
 
-
     app = pn.Column(
         pn.pane.Markdown("# Isochrone Viewer\n\nA basic map view using DeckGL and Panel."),
         pn.pane.DeckGL(deck_spec, height=800),
@@ -462,7 +521,8 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
     )
     return app
 
+
 if __name__ == "__main__":
-    LAYERS = []
+    # LAYERS = []
     app = app_for(LAYERS)
     pn.serve(app, port=5006, show=True, title="Isochrone Viewer")
