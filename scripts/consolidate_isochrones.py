@@ -9,6 +9,11 @@
 # ]
 # ///
 
+# TODO:
+# - Create a consolidated geodataframe of all isochrone polygons non-merged
+# - Create a consolidated geodataframe of all isochrone polygons merged by personal transport mode and tier
+#  - Create a consolidated geodataframe of all isochrone polygons merged by public transport mode, personal transport mode and tier
+
 import pathlib
 from pathlib import Path
 import geopandas as gpd

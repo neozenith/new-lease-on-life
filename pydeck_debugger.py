@@ -22,8 +22,6 @@ Shows a map centered and zoomed to the bounding box:
 # ]
 # ///
 import os
-import pathlib
-from pathlib import Path
 
 import geopandas as gpd
 import panel as pn
@@ -73,6 +71,7 @@ def rgba_float_to_255(rgba: tuple[float, float, float, float]) -> list[int]:
 def min_max_normalize(series):
     return (series - series.min()) / (series.max() - series.min())
 
+
 PTV_LINES = "data/public_transport_lines.geojson"
 
 ISOCHRONE_FOOT = "data/geojson_fixed/foot/"
@@ -84,9 +83,30 @@ PTV_OPACITY = 0.75  # Opacity for PTV lines and stops
 ISOCHRONE_OPACITY = 0.1  # Opacity for isochrones
 ISOCHRONE_LINE_OPACITY = 1.0
 
-PTV_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
+PTV_MODES = [
+    "METRO TRAM",
+    "METRO TRAIN",
+    "REGIONAL TRAIN",
+    "INTERSTATE TRAIN",
+    "REGIONAL BUS",
+    "REGIONAL COACH",
+    "METRO BUS",
+    "SKYBUS",
+]
 MODES = {"car": ISOCHRONE_CAR, "bike": ISOCHRONE_BIKE, "foot": ISOCHRONE_FOOT}
-ALL_MODES = ["METRO TRAM", "bike", "METRO TRAIN", "car", "REGIONAL TRAIN", "foot", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
+ALL_MODES = [
+    "METRO TRAM",
+    "bike",
+    "METRO TRAIN",
+    "car",
+    "REGIONAL TRAIN",
+    "foot",
+    "INTERSTATE TRAIN",
+    "REGIONAL BUS",
+    "REGIONAL COACH",
+    "METRO BUS",
+    "SKYBUS",
+]
 ISOCHRONE_TIERS = ["15", "10", "5"]
 
 # Give all modes of transport, either personal or public transport, a unique hue in the HSV color space.
@@ -124,9 +144,12 @@ def load_ptv_lines_data() -> gpd.GeoDataFrame:
 
     gdf_ptv_lines = gdf_ptv_lines[~gdf_ptv_lines["SHORT_NAME"].str.contains("Replacement Bus")]
 
-    gdf_ptv_lines["color"] = gdf_ptv_lines.apply(lambda row: ptv_colour_lookup.get(row["MODE"]), axis=1)
+    gdf_ptv_lines["color"] = gdf_ptv_lines.apply(
+        lambda row: ptv_colour_lookup.get(row["MODE"]), axis=1
+    )
 
     return gdf_ptv_lines
+
 
 def layer_for(gdf):
     return pdk.Layer(
@@ -138,9 +161,6 @@ def layer_for(gdf):
         pickable=True,
         auto_highlight=True,
     )
-
-
-
 
 
 def app_for(layers: list[pdk.Layer]) -> pn.Column:
@@ -156,7 +176,13 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
     map_style = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
 
     INITIAL_VIEW_STATE = pdk.ViewState(
-        bearing=0, latitude=center_lat, longitude=center_lon, maxZoom=15, minZoom=5, pitch=0, zoom=11
+        bearing=0,
+        latitude=center_lat,
+        longitude=center_lon,
+        maxZoom=15,
+        minZoom=5,
+        pitch=0,
+        zoom=11,
     )
 
     LAYERS = [layer_for(gdf)]
@@ -173,13 +199,13 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
         },
     )
 
-
     app = pn.Column(
         pn.pane.Markdown("# Isochrone Viewer\n\nA basic map view using DeckGL and Panel."),
         pn.pane.DeckGL(deck_spec, height=800),
         sizing_mode="stretch_width",
     )
     return app
+
 
 if __name__ == "__main__":
     # pn.serve(app, port=5006, show=True, title="Isochrone Viewer")
@@ -192,10 +218,8 @@ if __name__ == "__main__":
     # MODE: object unique_count=8
     # gdf.drop(columns=["SHAPE_ID", "HEADSIGN", "SHORT_NAME", "LONG_NAME"], inplace=True)
     app = app_for(gdf)
-    
+
     try:
         pn.serve(app, port=5006, show=True, title="Isochrone Viewer")
     except Exception as e:
         print(f"Error starting app: {e}")
-        
-    
