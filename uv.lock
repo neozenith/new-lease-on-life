@@ -400,6 +400,7 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydeck" },
     { name = "python-dotenv" },
+    { name = "requests" },
     { name = "superclaude" },
 ]
 
@@ -495,6 +496,7 @@ requires-dist = [
     { name = "python-dotenv", marker = "extra == 'viewer'", specifier = ">=1.0.0" },
     { name = "python-multipart", marker = "extra == 'server'", specifier = ">=0.0.6" },
     { name = "pyyaml", marker = "extra == 'geocode'", specifier = ">=6.0.1" },
+    { name = "requests", specifier = ">=2.32.4" },
     { name = "requests", marker = "extra == 'geocode'", specifier = ">=2.31.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.7" },
     { name = "shapely", marker = "extra == 'export-shapefiles'", specifier = ">=2.0.1" },

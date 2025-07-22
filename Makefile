@@ -9,7 +9,7 @@ aux_data:
 
 ######### API FETCHING #########
 scrape_isochrones:
-	uv run batch_isochrones_for_stops.py --status
+	uv run scripts/batch_isochrones_for_stops.py --status
 
 rentals: 
 	uv run scripts/process_realestate_candidates.py

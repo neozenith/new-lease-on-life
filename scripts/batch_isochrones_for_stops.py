@@ -11,81 +11,39 @@
 import argparse
 import json
 import os
-import re
 import sys
 import time
 from pathlib import Path
 
-import geopandas as gpd
 import requests
 from dotenv import load_dotenv
+from utils import (
+    MAPBOX_PROFILE_MAPPING,
+    PTV_TRANSPORT_MODES,
+    TRANSPORT_MODES,
+    iterate_stop_modes,
+    load_stops,
+    make_request_with_retry,
+)
 
 # Load environment variables from .env file
 load_dotenv()
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
 
 GRAPHHOPPER_API_KEY = os.environ.get("GRAPHHOPPER_API_KEY", "")
 GRAPHHOPPER_HOST = os.environ.get("GRAPHHOPPER_HOST", "https://graphhopper.com")
 ISOCHRONE_URL = f"{GRAPHHOPPER_HOST}/api/1/isochrone"
 
-MAPBOX_LIMIT=60.0/300.0 # 300 requests per minute
+MAPBOX_LIMIT = 60.0 / 300.0  # 300 requests per minute
 MAPBOX_API_TOKEN = os.environ.get("MAPBOX_API_TOKEN", "")
 MAPBOX_API_HOST = os.environ.get("MAPBOX_API_HOST", "https://api.mapbox.com")
 MAPBOX_ISOCHRONE_URL = f"{MAPBOX_API_HOST}/isochrone/v1/mapbox"
 
-TRANSPORT_MODES = ["foot", "bike", "car"]
-TRANSPORT_MODES = ["foot", "bike"]
-MAPBOX_PROFILE_MAPPING = {
-    "foot": "walking",
-    "bike": "cycling",
-    "car": "driving",
-}
-PTV_TRANSPORT_MODES = ["INTERSTATE TRAIN", "REGIONAL TRAIN", "METRO TRAIN", "METRO TRAM"]
 TIME_LIMIT = 900
 BUCKETS = 3
 MAPBOX_COUNTOUR_TIMES = [5, 10, 15]  # Minutes for Mapbox isochrones
-
-
-STOPS_GEOJSON = "data/geojson/ptv/stops_within_union.geojson"
-STOPS_GEOJSON = "data/public_transport_stops.geojson"
-OUTPUT_BASE = "data/geojson"
-
-
-# Helper to normalise stop names for filenames
-def normalise_name(name):
-    return re.sub(r"[^a-zA-Z0-9]+", "_", name).strip("_").lower()
-
-
-def make_request_with_retry(url, params, max_retries=10, backoff_factor=5, timeout=30):
-    """Make HTTP request with exponential backoff retry for rate limiting.
-    
-    Args:
-        url: The URL to request
-        params: Query parameters for the request
-        max_retries: Maximum number of retry attempts
-        backoff_factor: Multiplier for exponential backoff delay
-        timeout: Request timeout in seconds
-        
-    Returns:
-        Response JSON data
-        
-    Raises:
-        Exception: If all retries are exhausted due to rate limiting
-        requests.HTTPError: For non-429 HTTP errors
-    """
-    delay = 1
-    for attempt in range(max_retries):
-        response = requests.get(url, params=params, timeout=timeout)
-        if response.status_code == 429:
-            print(response.text)
-            print(
-                f"Rate limited (HTTP 429) on attempt {attempt + 1}. Retrying in {delay} seconds..."
-            )
-            time.sleep(delay)
-            delay *= backoff_factor
-            continue
-        response.raise_for_status()
-        return response.json()
-    raise Exception(f"Failed after {max_retries} retries due to rate limiting.")
 
 
 # Function to call GraphHopper Isochrone API
@@ -113,75 +71,15 @@ def get_isochrone_mapbox(lat, lon, mode, countour_times, api_key, max_retries=10
     return make_request_with_retry(base_url, params, max_retries, backoff_factor)
 
 
-def load_stops(filter_modes=None):
-    """Load stops from GeoJSON file and optionally filter by transport modes.
-    
-    Args:
-        filter_modes: List of transport modes to filter by (e.g., PTV_TRANSPORT_MODES)
-                     If None, returns all stops.
-    
-    Returns:
-        GeoDataFrame of stops
-    """
-    gdf = gpd.read_file(STOPS_GEOJSON)
-    gdf = gdf[
-        ~gdf["STOP_NAME"].str.contains("Rail Replacement Bus Stop")
-    ]
-    before = len(gdf)
-    gdf = gdf.groupby("STOP_NAME", as_index=False).first() # Consolidate duplicate stops that are effectively the same stop
-    after = len(gdf)
-    
-    # Sort by custom order defined in PTV_TRANSPORT_MODES
-    mode_order = {mode: idx for idx, mode in enumerate(PTV_TRANSPORT_MODES)}
-    gdf = gdf.sort_values("MODE", key=lambda x: x.map(mode_order))
-
-    print(f"Filtered stops: {before} -> {after} unique stops")
-    if filter_modes:
-        gdf = gdf[gdf["MODE"].isin(filter_modes)]
-    return gdf
-
-
-def get_isochrone_filepath(stop_id, stop_name, mode):
-    """Generate the output filepath for an isochrone.
-    
-    Args:
-        stop_id: The stop ID
-        stop_name: The stop name
-        mode: The transport mode
-        
-    Returns:
-        Path object for the isochrone file
-    """
-    norm_name = normalise_name(str(stop_name))
-    out_dir = Path(OUTPUT_BASE) / mode
-    return out_dir / f"isochrone_{stop_id}_{norm_name}.geojson"
-
-
-def iterate_stop_modes(gdf: gpd.GeoDataFrame) -> tuple[int, gpd.GeoSeries, str, str, str, Path]:
-    """Iterate through all stops and transport modes.
-    
-    Args:
-        gdf: GeoDataFrame of stops
-        
-    Yields:
-        Tuple of (idx, row, stop_id, stop_name, mode, out_file)
-    """
-    for idx, row in gdf.iterrows():
-        stop_id = row.get("STOP_ID", idx)
-        stop_name = row.get("STOP_NAME", f"stop_{idx}")
-        for mode in TRANSPORT_MODES:
-            out_file = get_isochrone_filepath(stop_id, stop_name, mode)
-            yield idx, row, stop_id, stop_name, mode, out_file
-
-
 def status():
     # Load stops
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     print(f"{gdf.columns=}")
-    
 
     expected_count = {}
     cached_count = {}
+    expected_total = 0
+    cached_total = 0
     for mode in TRANSPORT_MODES:
         for ptv_mode in PTV_TRANSPORT_MODES:
             expected_count[(mode, ptv_mode)] = 0
@@ -192,34 +90,49 @@ def status():
         if ptv_mode is None:
             print(f"❌ Missing PTV_MODE for stop {row.get('STOP_ID', 'unknown')}, skipping.")
             continue
-        
+
         expected_count[(mode, ptv_mode)] += 1
         if out_file.exists():
             cached_count[(mode, ptv_mode)] += 1
 
     for mode in TRANSPORT_MODES:
-            for ptv_mode in PTV_TRANSPORT_MODES:
-                key = (mode, ptv_mode)
-                expectations_str = f"expected {expected_count[key]:5d}\tcached {cached_count[key]:5d}\tremaining {expected_count[key] - cached_count[key]:5d}\t"
-                cached_percent = cached_count[key] / expected_count[key] * 100.0 if expected_count[key] > 0 else 100.0
-                cached_percent_str = f"{cached_percent:.2f}%"
-                print(f"{mode.upper():<16} {ptv_mode.upper():<16}: {expectations_str} {cached_percent_str}")
+        for ptv_mode in PTV_TRANSPORT_MODES:
+            key = (mode, ptv_mode)
+            expectations_str = f"expected {expected_count[key]:5d}\tcached {cached_count[key]:5d}\tremaining {expected_count[key] - cached_count[key]:5d}\t"
+            cached_percent = (
+                cached_count[key] / expected_count[key] * 100.0
+                if expected_count[key] > 0
+                else 100.0
+            )
+            cached_percent_str = f"{cached_percent:.2f}%"
+            print(
+                f"{mode.upper():<16} {ptv_mode.upper():<16}: {expectations_str} {cached_percent_str}"
+            )
+    expected_total = sum(expected_count.values())
+    cached_total = sum(cached_count.values())
+    cached_total_percent = cached_total / expected_total * 100.0 if expected_total > 0 else 100.0
+    cached_total_percent_str = f"{cached_total_percent:.2f}%"
+    t = "TOTAL"
+    print(
+        f"{t:<33}: expected {expected_total:5d}\tcached {cached_total:5d}\tremaining {expected_total - cached_total:5d}\t {cached_total_percent_str}"
+    )
+
 
 def dry_run(limit):
     """Perform a dry run to check how many isochrones would be scraped.
-    
+
     Args:
         limit: Maximum number of isochrones to scrape
     """
     # Load stops - no filtering for scraping all stops
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     count = 0
-    
+
     for idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
         if out_file.exists():
             # print(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
             continue
-            
+
         if count >= limit:
             print(f"Reached limit of {limit} isochrones, stopping.")
             return
@@ -227,38 +140,46 @@ def dry_run(limit):
         count += 1
         print(f"DRY RUN: {mode} {stop_id} ({ptv_mode}:{stop_name}) to {out_file}")
 
+
 def scrape(limit):
     # Load stops - no filtering for scraping all stops
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     count = 0
-    
+
     for idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
         if out_file.exists():
             # print(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
             continue
-            
+
         try:
             if count >= limit:
                 print(f"Reached limit of {limit} isochrones, stopping.")
                 return
-                
+
             # Create output directory if needed
             out_file.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Get coordinates
             lat, lon = row.geometry.y, row.geometry.x
-            
+            ptv_mode = row.get("MODE", None)
+
             # Fetch isochrone data
             # result = get_isochrone(lat, lon, mode, TIME_LIMIT, BUCKETS, GRAPHHOPPER_API_KEY)
-            result = get_isochrone_mapbox(lat, lon, MAPBOX_PROFILE_MAPPING[mode], ",".join(map(str, MAPBOX_COUNTOUR_TIMES)), MAPBOX_API_TOKEN)
+            result = get_isochrone_mapbox(
+                lat,
+                lon,
+                MAPBOX_PROFILE_MAPPING[mode],
+                ",".join(map(str, MAPBOX_COUNTOUR_TIMES)),
+                MAPBOX_API_TOKEN,
+            )
 
             # Save result
             out_file.write_text(json.dumps(result, indent=2))
-            print(f"✅ Saved {mode} {stop_id} ({stop_name}) to {out_file}")
-            
+            print(f"✅ Saved {ptv_mode} {mode} {stop_id} ({stop_name}) to {out_file}")
+
             count += 1
             time.sleep(3)  # Avoid hitting API rate limits
-            
+
         except requests.HTTPError as e:
             print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: HTTP error {e}")
         except Exception as e:

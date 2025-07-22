@@ -18,12 +18,16 @@ import logging
 import re
 import time
 import zipfile
+from collections.abc import Generator
 from pathlib import Path
 
 import geopandas as gpd
 import requests
 
 logger = logging.getLogger(__name__)
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
 
 TRANSPORT_MODES = ["foot", "bike", "car"]
 
@@ -37,12 +41,14 @@ TIME_LIMIT = 900
 BUCKETS = 3
 MAPBOX_COUNTOUR_TIMES = [5, 10, 15]  # Minutes for Mapbox isochrones
 
-STOPS_GEOJSON = "data/public_transport_stops.geojson"
+STOPS_GEOJSON = SCRIPT_DIR.parent / "data/public_transport_stops.geojson"
 
-OUTPUT_BASE = "data/geojson"
+OUTPUT_BASE = SCRIPT_DIR.parent / "data/geojson"
+
 
 def min_max_normalize(series):
     return (series - series.min()) / (series.max() - series.min())
+
 
 # Helper to normalise stop names for filenames
 def normalise_name(name):
@@ -91,6 +97,25 @@ def load_stops(filter_modes=None):
     if filter_modes:
         gdf = gdf[gdf["MODE"].isin(filter_modes)]
     return gdf
+
+
+def iterate_stop_modes(
+    gdf: gpd.GeoDataFrame,
+) -> Generator[tuple[int, gpd.GeoSeries, str, str, str, Path]]:
+    """Iterate through all stops and transport modes.
+
+    Args:
+        gdf: GeoDataFrame of stops
+
+    Yields:
+        Tuple of (idx, row, stop_id, stop_name, mode, out_file)
+    """
+    for idx, row in gdf.iterrows():
+        stop_id = row.get("STOP_ID", idx)
+        stop_name = row.get("STOP_NAME", f"stop_{idx}")
+        for mode in TRANSPORT_MODES:
+            out_file = get_isochrone_filepath(stop_id, stop_name, mode)
+            yield idx, row, stop_id, stop_name, mode, out_file
 
 
 def make_request_with_retry(url, params, max_retries=10, backoff_factor=5, timeout=30):
