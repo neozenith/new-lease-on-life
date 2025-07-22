@@ -396,6 +396,7 @@ dependencies = [
     { name = "duckdb-extensions" },
     { name = "playwright" },
     { name = "python-dotenv" },
+    { name = "superclaude" },
 ]
 
 [package.optional-dependencies]
@@ -489,6 +490,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'geocode'", specifier = ">=2.31.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.7" },
     { name = "shapely", marker = "extra == 'export-shapefiles'", specifier = ">=2.0.1" },
+    { name = "superclaude", specifier = ">=3.0.0.1" },
     { name = "tqdm", marker = "extra == 'export-shapefiles'", specifier = ">=4.66.1" },
     { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.23.2" },
 ]
@@ -1094,6 +1096,15 @@ wheels = [
 ]
 
 [[package]]
+name = "setuptools"
+version = "80.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486 },
+]
+
+[[package]]
 name = "shapely"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1157,6 +1168,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0a/69/662169fdb92fb96ec3eaee218cf540a629d629c86d7993d9651226a6789b/starlette-0.47.1.tar.gz", hash = "sha256:aef012dd2b6be325ffa16698f9dc533614fb1cebd593a906b90dc1025529a79b", size = 2583072 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/82/95/38ef0cd7fa11eaba6a99b3c4f5ac948d8bc6ff199aabd327a29cc000840c/starlette-0.47.1-py3-none-any.whl", hash = "sha256:5e11c9f5c7c3f24959edbf2dffdc01bba860228acf657129467d8a7468591527", size = 72747 },
+]
+
+[[package]]
+name = "superclaude"
+version = "3.0.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "setuptools" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/32/6f14cf2bff85ab3f71a5ffdb7fd6929280412fe19c3cb873577bb4ec93c0/superclaude-3.0.0.1.tar.gz", hash = "sha256:df994c50a6222363a550694e951f6148a36fcbe2f1093746d8b67e7c9fcb9279", size = 109736 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/07/dc83de11e91274af98d31e561c997f91ff95d378ff0c2949fd34d3bdd7e3/SuperClaude-3.0.0.1-py3-none-any.whl", hash = "sha256:cec1c6988e34579dfe0f7c48a0aadeb0c4999b6d46cc2ef7c5576fc15d601f6c", size = 136799 },
 ]
 
 [[package]]

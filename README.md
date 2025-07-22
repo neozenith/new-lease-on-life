@@ -84,14 +84,16 @@ This project uses the GraphHopper API for geocoding and isochrone calculation.
 - https://discover.data.vic.gov.au/dataset/rental-report-quarterly-moving-annual-rents-by-suburb
 - https://discover.data.vic.gov.au/dataset/rental-report-quarterly-data-tables
 - https://discover.data.vic.gov.au/dataset/rental-report-quarterly-affordable-lettings-by-lga
+
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-yearly-summary
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-house-by-suburb
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-unit-by-suburb
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-vacant-land-by-suburb
-- https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-vacant-land-by-suburb-time-series
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-unit-by-suburb-time-series
-- https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-time-series
 - https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-house-by-suburb-time-series
+- https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-vacant-land-by-suburb-time-series
+- https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-time-series
+
 
 - https://discover.data.vic.gov.au/dataset/vpa-precinct-boundaries
 
