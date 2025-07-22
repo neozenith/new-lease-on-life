@@ -74,21 +74,14 @@ def min_max_normalize(series):
 
 
 PTV_STOPS = "data/geojson/ptv/stops_with_commute_times.parquet"
-PTV_LINES = "data/public_transport_lines.geoparquet"
+PTV_LINES = "data/public_transport_lines.geojson"
 PTV_HULLS = "data/geojson/ptv/ptv_commute_tier_hulls.parquet"
 
 POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes.parquet"
 SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_postcodes.parquet"
-# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_lga_2024_aust_gda2020.parquet"
-# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_sa1_2021_aust_gda2020.parquet"
-# SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_sa2_2021_aust_gda2020.parquet"
+
 
 mesh_key = "POA_CODE21"
-# mesh_key = "SAL_NAME21"
-# mesh_key = "MB_CODE21"
-# mesh_key = "LGA_CODE24"
-# mesh_key = "SA1_CODE21"
-# mesh_key = "SA2_CODE21"
 
 
 TRAM_POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams.parquet"
@@ -106,9 +99,9 @@ ISOCHRONE_OPACITY = 0.1  # Opacity for isochrones
 ISOCHRONE_LINE_OPACITY = 1.0
 
 
-PTV_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN"]
+PTV_MODES = ["METRO TRAM", "METRO TRAIN", "REGIONAL TRAIN", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
 MODES = {"car": ISOCHRONE_CAR, "bike": ISOCHRONE_BIKE, "foot": ISOCHRONE_FOOT}
-ALL_MODES = ["METRO TRAM", "bike", "METRO TRAIN", "car", "REGIONAL TRAIN", "foot"]
+ALL_MODES = ["METRO TRAM", "bike", "METRO TRAIN", "car", "REGIONAL TRAIN", "foot", "INTERSTATE TRAIN", "REGIONAL BUS", "REGIONAL COACH", "METRO BUS", "SKYBUS"]
 ISOCHRONE_TIERS = ["15", "10", "5"]
 
 # Give all modes of transport, either personal or public transport, a unique hue in the HSV color space.
@@ -133,8 +126,6 @@ ptv_color_lookup = {
 }
 print(f"PTV color lookup: {ptv_color_lookup}")
 
-# Enable DeckGL extension
-pn.extension("deckgl", template="fast", sizing_mode="stretch_width")
 
 # Bounding box coordinates
 TOP_LEFT = (-37.713453, 144.895298)  # (lat, lon)
@@ -214,7 +205,7 @@ traintram_outer_boundary_layer = pdk.Layer(
     auto_highlight=False,
 )
 
-gdf_ptv_lines = gpd.read_parquet(PTV_LINES)
+gdf_ptv_lines = gpd.read_file(PTV_LINES)
 gdf_ptv_lines = gdf_ptv_lines.to_crs("EPSG:4326")
 
 # if len(gdf_ptv_lines["MODE"].unique()) > 3:
@@ -223,7 +214,15 @@ print(gdf_ptv_lines["MODE"].unique())
 print(f"Initial PTV lines, total: {len(gdf_ptv_lines)}")
 gdf_ptv_lines = gdf_ptv_lines[
     ~gdf_ptv_lines["MODE"].isin(
-        ["METRO BUS", "REGIONAL BUS", "REGIONAL COACH", "SKYBUS", "INTERSTATE TRAIN"]
+        [
+            "METRO BUS", 
+            "REGIONAL BUS", 
+            "REGIONAL COACH", 
+            "SKYBUS", 
+            # "REGIONAL TRAIN", 
+            "METRO TRAIN", 
+            "METRO TRAM"
+        ]
     )
 ]
 gdf_ptv_lines = gdf_ptv_lines[~gdf_ptv_lines["SHORT_NAME"].str.contains("Replacement Bus")]
@@ -424,30 +423,46 @@ for rental_candidate in pathlib.Path("data/candidate_real_estate/").glob("*.geoj
         pickable=True,
         auto_highlight=True,
     )
-    LAYERS.append(rental_layer)
+    # LAYERS.append(rental_layer)
 
-print(f"Added {len(LAYERS)} layers to the map.")
+def app_for(layers: list[pdk.Layer]) -> pn.Column:
+    # Bounding box coordinates
+    TOP_LEFT = (-37.713453, 144.895298)  # (lat, lon)
+    BOTTOM_RIGHT = (-37.814206, 144.989262)  # (lat, lon)
 
-deck_spec = pdk.Deck(
-    initial_view_state=INITIAL_VIEW_STATE,
-    layers=LAYERS,
-    map_provider="google_maps",  # Use Google Maps as the base map
-    map_style=map_style,
-    views=[{"@@type": "MapView", "controller": True}],
-    api_keys={
-        "google_maps": os.environ.get(
-            "GOOGLE_MAPS_API_KEY", ""
-        ),  # Replace with your Google Maps API key
-    },
-)
+    # Calculate center
+    center_lat = (TOP_LEFT[0] + BOTTOM_RIGHT[0]) / 2
+    center_lon = (TOP_LEFT[1] + BOTTOM_RIGHT[1]) / 2
+
+    # DeckGL initial view state
+    map_style = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+
+    INITIAL_VIEW_STATE = pdk.ViewState(
+        bearing=0, latitude=center_lat, longitude=center_lon, maxZoom=15, minZoom=5, pitch=0, zoom=11
+    )
+
+    deck_spec = pdk.Deck(
+        initial_view_state=INITIAL_VIEW_STATE,
+        layers=layers,
+        map_provider="google_maps",  # Use Google Maps as the base map
+        map_style=map_style,
+        views=[{"@@type": "MapView", "controller": True}],
+        api_keys={
+            "google_maps": os.environ.get(
+                "GOOGLE_MAPS_API_KEY", ""
+            ),  # Replace with your Google Maps API key
+        },
+    )
 
 
-app = pn.Column(
-    pn.pane.Markdown("# Isochrone Viewer\n\nA basic map view using DeckGL and Panel."),
-    pn.pane.DeckGL(deck_spec, height=600),
-    sizing_mode="stretch_width",
-)
-
+    app = pn.Column(
+        pn.pane.Markdown("# Isochrone Viewer\n\nA basic map view using DeckGL and Panel."),
+        pn.pane.DeckGL(deck_spec, height=800),
+        sizing_mode="stretch_width",
+    )
+    return app
 
 if __name__ == "__main__":
+    LAYERS = []
+    app = app_for(LAYERS)
     pn.serve(app, port=5006, show=True, title="Isochrone Viewer")

@@ -51,9 +51,9 @@ for mode, modality_isochrone_path in MODES.items():
         gdf = gdf.to_crs("EPSG:4326")  # Ensure CRS is WGS84 for web compatibility
         gdf["source_file"] = str(f)
 
-        gdf_5 = gdf[gdf["bucket"] == 0]
-        gdf_10 = gdf[gdf["bucket"] == 1]
-        gdf_15 = gdf[gdf["bucket"] == 2]
+        gdf_5 = gdf[gdf["contour_time_minutes"] == 5]
+        gdf_10 = gdf[gdf["contour_time_minutes"] == 10]
+        gdf_15 = gdf[gdf["contour_time_minutes"] == 15]
 
         gdf_isochrones[mode]["5"].append(gdf_5)
         gdf_isochrones[mode]["10"].append(gdf_10)
