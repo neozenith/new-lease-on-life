@@ -11,6 +11,7 @@ to Southern Cross Station, and save the results as a GeoJSON file.
 #   "geopandas",
 #   "pandas",
 #   "pyarrow",
+#   "requests",
 # ]
 # ///
 
@@ -18,6 +19,7 @@ import json
 import logging
 import os
 import pathlib
+from pathlib import Path
 import time
 from datetime import datetime, timedelta
 
@@ -26,20 +28,26 @@ import googlemaps
 import pandas as pd
 from dotenv import load_dotenv
 
+from utils import dirty, save_geodataframe, min_max_normalize
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+
 HULL_TIER_SIZE = 5  # minutes
 
 # Constants
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 SOUTHERN_CROSS = "Southern Cross Station, Melbourne, Australia"
-TRANSIT_TIME_CACHE = "data/transit_time_cache/"
-STOPS = "data/geojson/ptv/stops_within_union.parquet"
+TRANSIT_TIME_CACHE = SCRIPT_DIR.parent / "data/transit_time_cache/"
+STOPS = SCRIPT_DIR.parent / "data/geojson/ptv/stops_within_union.parquet"
 
-OUTPUT_BASE = pathlib.Path("data/geojson/ptv/")
+OUTPUT_BASE = SCRIPT_DIR.parent / "data/geojson/ptv/"
 OUTPUT_GEOJSON = OUTPUT_BASE / "stops_with_commute_times.geojson"
 OUTPUT_PARQUET = OUTPUT_BASE / "stops_with_commute_times.parquet"
 
+OUTPUT_HULL_GEOJSON = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
+
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -83,21 +91,19 @@ def cache_check(gdf):
     cached = 0
     for _, stop in gdf.iterrows():
         name = stop["STOP_NAME"]
-        output = pathlib.Path(TRANSIT_TIME_CACHE) / normalised_stop_name(name)
+        output = TRANSIT_TIME_CACHE / normalised_stop_name(name)
         expected += 1
         if output.exists():
             cached += 1
 
-    logger.info(f"{cached} / {expected}  {cached / expected * 100.0:.2f}% ")
+    logger.info(f"Cached {cached} / {expected}  {cached / expected * 100.0:.2f}% ")
 
 
-def min_max_normalize(series):
-    return (series - series.min()) / (series.max() - series.min())
+
 
 
 def create_hulls(gdf):
-    output_path = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
-    
+
     gdf_ptv_stops = gdf
     # gdf_ptv_stops = gdf_ptv_stops.to_crs("EPSG:4326")
     # Make sure MODE is a column, not just in the index
@@ -113,7 +119,7 @@ def create_hulls(gdf):
         gdf_ptv_stops["transit_time_minutes"] / tier_size
     ).round() * tier_size
     gdf_ptv_stops["transit_time_minutes_nearest_tier_z"] = (
-        min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5 + 0.5
+        min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5 + 0.5 # Normalized to [0.5, 1.0] to be able to be used for opacity or saturation
     )
     # print(gdf_ptv_stops["transit_time_minutes_nearest_tier_z"])
 
@@ -190,10 +196,8 @@ def create_hulls(gdf):
     gdf_ptv_tiers = gdf_ptv_tiers.sort_values(
         by=["transit_time_minutes_nearest_tier"], ascending=False
     )
-    gdf_ptv_tiers.to_file(OUTPUT_BASE / "ptv_commute_tier_hulls.geojson", driver="GeoJSON")
-    gdf_ptv_tiers.to_parquet(
-        OUTPUT_BASE / "ptv_commute_tier_hulls.parquet", engine="pyarrow", index=False
-    )
+    
+    save_geodataframe(gdf_ptv_tiers, OUTPUT_HULL_GEOJSON)
 
 
 def main():
@@ -280,4 +284,6 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
     main()

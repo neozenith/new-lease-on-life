@@ -5,7 +5,7 @@ aux_data:
 #	uv run scripts/export_shapefiles.py
 	time uv run scripts/extract_postcode_polygons.py
 	time uv run scripts/extract_stops_within_union.py
-	time uv run stops_by_transit_time.py
+	time uv run scripts/stops_by_transit_time.py
 
 ######### API FETCHING #########
 scrape_isochrones:

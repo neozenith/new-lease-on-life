@@ -1,3 +1,19 @@
+#!/usr/bin/env python3
+"""
+Export shapefiles from data subdirectories to GeoJSON format.
+This script scans the data/ directory for SHP files and converts them to GeoJSON.
+"""
+
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#   "geopandas",
+#   "requests",
+#   "python-dotenv>=1.0.0",
+#   "tqdm>=4.66.1",
+#   "pyarrow",
+# ]
+# ///
 import logging
 import re
 import time
@@ -25,6 +41,8 @@ STOPS_GEOJSON = "data/public_transport_stops.geojson"
 
 OUTPUT_BASE = "data/geojson"
 
+def min_max_normalize(series):
+    return (series - series.min()) / (series.max() - series.min())
 
 # Helper to normalise stop names for filenames
 def normalise_name(name):
@@ -171,7 +189,13 @@ def save_geodataframe(gdf: gpd.GeoDataFrame, output_file: Path) -> Path:
         Path to the saved GeoJSON file
     """
     output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent directory exists
+    geoparquet_file = output_file.with_suffix(".parquet")
     gdf.to_file(output_file, driver="GeoJSON")
-    gdf.to_parquet(output_file.with_suffix(".parquet"), engine="pyarrow", index=False)
+    gdf.to_parquet(geoparquet_file, engine="pyarrow", index=False)
+    logger.info(
+        f"Saved GeoDataFrame to {output_file} and {geoparquet_file} "
+        f"({output_file.stat().st_size / 1024 / 1024:.2f} MB, "
+        f"{geoparquet_file.stat().st_size / 1024 / 1024:.2f} MB)"
+    )
 
     return output_file
