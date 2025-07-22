@@ -13,9 +13,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-
 from utils import dirty, save_geodataframe
-
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -23,7 +21,8 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 POSTCODES_CSV = SCRIPT_DIR.parent / "postcodes.csv"
 STOPS_GEOJSON = SCRIPT_DIR.parent / "data/public_transport_stops.parquet"
 POSTCODE_POLYGONS = (
-    SCRIPT_DIR.parent / "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.parquet"
+    SCRIPT_DIR.parent
+    / "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.parquet"
 )
 
 BOUNDARIES_BASE = SCRIPT_DIR.parent / "data/originals_converted/boundaries"
@@ -41,6 +40,7 @@ for b in BOUNDARIES:
 
 # OUTPUTS
 OUTPUT_ROOT = SCRIPT_DIR.parent / "data/geojson/ptv/boundaries/"
+
 
 def check_output_up_to_date():
     """

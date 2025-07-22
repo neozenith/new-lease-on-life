@@ -8,16 +8,17 @@
 # ]
 # ///
 
-import pathlib
 from pathlib import Path
-import geopandas as gpd
 
+import geopandas as gpd
 from utils import dirty, save_geodataframe
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
 # INPUTS
-UNIONED_GEOJSON = SCRIPT_DIR.parent / "data/geojson/ptv/boundaries/unioned_postcodes_with_trams_trains.parquet"
+UNIONED_GEOJSON = (
+    SCRIPT_DIR.parent / "data/geojson/ptv/boundaries/unioned_postcodes_with_trams_trains.parquet"
+)
 STOPS_GEOJSON = SCRIPT_DIR.parent / "data/public_transport_stops.parquet"
 
 # OUTPUTS
@@ -28,7 +29,7 @@ def extract_stops_within_union():
     if not dirty(OUTPUT_STOPS_GEOJSON, [UNIONED_GEOJSON, STOPS_GEOJSON]):
         print(f"{OUTPUT_STOPS_GEOJSON} is up to date. Skipping extraction.")
         return
-    
+
     # Load the unioned postcode polygon
     unioned_gdf = gpd.read_parquet(UNIONED_GEOJSON)
     unioned_geom = unioned_gdf.union_all()

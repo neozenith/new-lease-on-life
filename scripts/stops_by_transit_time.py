@@ -19,16 +19,15 @@ import json
 import logging
 import os
 import pathlib
-from pathlib import Path
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import geopandas as gpd
 import googlemaps
 import pandas as pd
 from dotenv import load_dotenv
-
-from utils import dirty, save_geodataframe, min_max_normalize
+from utils import min_max_normalize, save_geodataframe
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -99,11 +98,7 @@ def cache_check(gdf):
     logger.info(f"Cached {cached} / {expected}  {cached / expected * 100.0:.2f}% ")
 
 
-
-
-
 def create_hulls(gdf):
-
     gdf_ptv_stops = gdf
     # gdf_ptv_stops = gdf_ptv_stops.to_crs("EPSG:4326")
     # Make sure MODE is a column, not just in the index
@@ -119,7 +114,8 @@ def create_hulls(gdf):
         gdf_ptv_stops["transit_time_minutes"] / tier_size
     ).round() * tier_size
     gdf_ptv_stops["transit_time_minutes_nearest_tier_z"] = (
-        min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5 + 0.5 # Normalized to [0.5, 1.0] to be able to be used for opacity or saturation
+        min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5
+        + 0.5  # Normalized to [0.5, 1.0] to be able to be used for opacity or saturation
     )
     # print(gdf_ptv_stops["transit_time_minutes_nearest_tier_z"])
 
@@ -196,7 +192,7 @@ def create_hulls(gdf):
     gdf_ptv_tiers = gdf_ptv_tiers.sort_values(
         by=["transit_time_minutes_nearest_tier"], ascending=False
     )
-    
+
     save_geodataframe(gdf_ptv_tiers, OUTPUT_HULL_GEOJSON)
 
 

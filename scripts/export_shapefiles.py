@@ -15,14 +15,12 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 # ]
 # ///
 import logging
-import zipfile
 from pathlib import Path
 
 import geopandas as gpd
 from dotenv import load_dotenv
 from tqdm import tqdm
-
-from utils import unzip_archive, dirty
+from utils import dirty, unzip_archive
 
 # Load environment variables from .env file
 load_dotenv()
@@ -95,10 +93,16 @@ def export_shapefile_to_geojson(
 
         # Guard condition to skip if up to date
         if not dirty(output_file, shapefile_path):
-            logger.info(f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb")
-            logger.info(f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb")
+            logger.info(
+                f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb"
+            )
+            logger.info(
+                f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb"
+            )
             geoparquet_path = output_file.with_suffix(".parquet")
-            logger.info(f"Found existing up-to-date geoparquet_file: {geoparquet_path} {geoparquet_path.stat().st_size / 1024 / 1024:.2f}Mb")
+            logger.info(
+                f"Found existing up-to-date geoparquet_file: {geoparquet_path} {geoparquet_path.stat().st_size / 1024 / 1024:.2f}Mb"
+            )
 
             return output_file
 

@@ -19,13 +19,16 @@ Can process single files or recursively iterate through directories.
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
 import geopandas as gpd
-
-from utils import dirty, load_stops, normalise_name, PTV_TRANSPORT_MODES, OUTPUT_BASE, TRANSPORT_MODES, MAPBOX_PROFILE_MAPPING
+from utils import (
+    PTV_TRANSPORT_MODES,
+    dirty,
+    load_stops,
+    normalise_name,
+)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -53,7 +56,9 @@ def fix_geojson(
     output_path = Path(output_file)
 
     if not dirty(output_path, input_path):
-        print(f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing.")
+        print(
+            f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing."
+        )
         return True
 
     isochrone_mode = input_path.parts[2]
@@ -307,7 +312,7 @@ def main():
 
     stops = load_stops(PTV_TRANSPORT_MODES)
     # Check if input is a directory
-    if input_path.is_dir(): 
+    if input_path.is_dir():
         if args.output is None:
             print("Error: When processing a directory, you must specify an output directory")
             return 1
