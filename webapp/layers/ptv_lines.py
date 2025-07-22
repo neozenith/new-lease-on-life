@@ -1,9 +1,10 @@
-
-import pydeck as pdk
-import geopandas as gpd
-from webapp.utils.colours import ptv_colour_mapping
 from pathlib import Path
+
+import geopandas as gpd
+import pydeck as pdk
+
 PTV_LINES = Path("data/geojson/ptv/lines/ptv_lines.geojson")
+
 
 def load_ptv_lines_data() -> gpd.GeoDataFrame:
     ptv_colour_lookup = _ptv_colour_lookup()
@@ -12,9 +13,12 @@ def load_ptv_lines_data() -> gpd.GeoDataFrame:
 
     gdf_ptv_lines = gdf_ptv_lines[~gdf_ptv_lines["SHORT_NAME"].str.contains("Replacement Bus")]
 
-    gdf_ptv_lines["color"] = gdf_ptv_lines.apply(lambda row: ptv_colour_lookup.get(row["MODE"]), axis=1)
+    gdf_ptv_lines["color"] = gdf_ptv_lines.apply(
+        lambda row: ptv_colour_lookup.get(row["MODE"]), axis=1
+    )
 
     return gdf_ptv_lines
+
 
 def layer_for(gdf):
     return pdk.Layer(

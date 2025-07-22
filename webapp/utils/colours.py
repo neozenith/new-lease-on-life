@@ -1,7 +1,11 @@
-from webapp.config import ALL_MODES, PERSONAL_MODES, PTV_MODES, ISOCHRONE_TIERS, ISOCHRONE_OPACITY, PTV_OPACITY, SUBURB_OPACITY, ISOCHRONE_LINE_OPACITY
-
-
-
+from webapp.config import (
+    ALL_MODES,
+    ISOCHRONE_OPACITY,
+    ISOCHRONE_TIERS,
+    PERSONAL_MODES,
+    PTV_MODES,
+    PTV_OPACITY,
+)
 
 # Give all modes of transport, either personal or public transport, a unique hue in the HSV color space.
 # This allows us to easily distinguish between them on the map.
@@ -9,6 +13,7 @@ float_hue_offset = 0.1
 HUE_FOR_MODE = {
     mode: (i / len(ALL_MODES) + float_hue_offset) % 1.0 for i, mode in enumerate(ALL_MODES)
 }
+
 
 def hsv_to_rgb(h: float, s: float, v: float, a: float) -> tuple[float, float, float, float]:
     if s:
@@ -42,6 +47,7 @@ def hsv_to_rgb(h: float, s: float, v: float, a: float) -> tuple[float, float, fl
 def rgba_float_to_255(rgba: tuple[float, float, float, float]) -> list[int]:
     """Convert a tuple of floats in range [0.0, 1.0] to a list of ints in range [0, 255]."""
     return [int(255 * c) for c in rgba[:3]] + [int(255 * rgba[3])]
+
 
 def isochrone_colours():
     isochrone_colors = {}
