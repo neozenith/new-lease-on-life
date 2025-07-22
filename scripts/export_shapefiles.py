@@ -32,8 +32,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-DATA_DIR = Path("data/originals")
-OUTPUT_DIR = Path("data/originals_converted/")
+SCRIPT_DIR = Path(__file__).parent.resolve()
+DATA_DIR = SCRIPT_DIR.parent / "data/originals"
+OUTPUT_DIR = SCRIPT_DIR.parent / "data/originals_converted/"
 
 BOUNDARY_DIR = DATA_DIR / "boundaries"
 
@@ -56,7 +57,7 @@ def find_shapefiles(data_dir: Path) -> list[Path]:
     # Log the results
     if shapefiles:
         for shp in shapefiles:
-            logger.info(f"Found shapefile: {shp}")
+            logger.info(f"Found shapefile: {shp} {shp.stat().st_size / 1024 / 1024:.2f}Mb")
     else:
         logger.warning(f"No shapefiles found in {data_dir} or its subdirectories")
 
@@ -91,6 +92,11 @@ def export_shapefile_to_geojson(
 
         # Guard condition to skip if up to date
         if output_file.exists() and output_file.stat().st_mtime > shapefile_path.stat().st_mtime:
+            logger.info(f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb")
+            logger.info(f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb")
+            geoparquet_path = output_file.with_suffix(".parquet")
+            logger.info(f"Found existing up-to-date geoparquet_file: {geoparquet_path} {geoparquet_path.stat().st_size / 1024 / 1024:.2f}Mb")
+
             return output_file
 
         logger.info(
