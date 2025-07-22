@@ -50,8 +50,8 @@ for mode, modality_isochrone_path in MODES.items():
     output_files = list((OUTPUT_DIR / mode).rglob("*.geojson"))
     min_output_mtime = min(f.stat().st_mtime for f in output_files)
 
-    # if not dirty(output_files, input_files):
-    #     continue  # Skip if no new files are found
+    if not dirty(output_files, input_files):
+        continue  # Skip if no new files are found
 
     for f in input_files:
         gdf = gpd.read_file(str(f))
@@ -86,11 +86,11 @@ for mode in MODES.keys():
         # print(f"Files contributing to {mode} {tier}: {max_input_mtime=}")
         isochrone_concatenated_path = OUTPUT_DIR / mode / f"{tier}.geojson"
 
-        # if not dirty(isochrone_concatenated_path, input_files):
-        #         print(
-        #             f"SKIP: Output file {isochrone_concatenated_path} is newer than input files. Skipping concatenation."
-        #         )
-        #         continue
+        if not dirty(isochrone_concatenated_path, input_files):
+                print(
+                    f"SKIP: Output file {isochrone_concatenated_path} is newer than input files. Skipping concatenation."
+                )
+                continue
 
         gdf_isochrones_concatenated[mode][tier] = gpd.GeoDataFrame(
             pd.concat(gdf_isochrones[mode][tier], ignore_index=True)
