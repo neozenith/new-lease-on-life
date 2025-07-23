@@ -96,8 +96,10 @@ def fix_geojson(
         _props["STOP_NAME"] = stop.STOP_NAME
     else:
         print(
-            f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. Using default properties."
+            f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. DELETING file"
         )
+        # Delete input_file
+        input_path.unlink(missing_ok=True)
 
     try:
         # Read the input file

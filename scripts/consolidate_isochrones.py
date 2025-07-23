@@ -53,7 +53,6 @@ for mode, modality_isochrone_path in MODES.items():
     )
     # Least recently updated outputfile
     output_files = list((OUTPUT_DIR / mode).rglob("*.geojson"))
-    min_output_mtime = min(f.stat().st_mtime for f in output_files)
 
     if not dirty(output_files, input_files):
         continue  # Skip if no new files are found
@@ -65,8 +64,8 @@ for mode, modality_isochrone_path in MODES.items():
         try:
             ptv_mode = gdf["MODE"].values[0]
             # print(f"Processing {ptv_mode} from {f}")
-        except KeyError:
-            print(f"Skipping {f} as it does not contain 'MODE' column.")
+        except KeyError as ke:
+            print(f"{ke} Skipping {f} as it does not contain 'MODE' column.")
             continue
 
         gdf_5 = gdf[gdf["contour_time_minutes"] == 5]

@@ -165,12 +165,16 @@ def dirty(output_path: list[Path] | Path, input_paths: list[Path] | Path) -> boo
     if isinstance(output_path, Path):
         output_path = [output_path]
 
+    if not output_path:  # If no output files (potentially from empty globbing) then it is dirty.
+        return True
+
     if any(not p.exists() for p in output_path):
-        return True  # If any output file doesn't exist, it's considered dirty
+        return True  # If any output file listed doesn't exist, it's considered dirty
 
     if isinstance(input_paths, Path):
         input_paths = [input_paths]
 
+    
     min_output_mtime = min(f.stat().st_mtime for f in output_path)
     max_input_mtime = max(f.stat().st_mtime for f in input_paths)
 

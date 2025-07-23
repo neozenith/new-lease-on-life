@@ -333,7 +333,7 @@ def get_hull_color(row):
     # Map tier to saturation (0.3-0.9 range)
     # Lower tiers (closer to city) have higher saturation
     max_tier = 60  # Assuming 90 minutes is our maximum tier
-    saturation = 1.0 - (0.8 * (min(tier, max_tier) / max_tier))
+    saturation = 1.0 - (0.3 * (min(tier, max_tier) / max_tier))
 
     # Map tier to value (0.5-0.9 range)
     # Lower tiers (closer to city) have higher value (brightness)
@@ -348,6 +348,25 @@ def get_hull_color(row):
             1.0 * saturation,  # link opacity to saturation too
         )
     )
+
+def get_hull_elevation(row):
+    height = 100.0
+    tier = row["transit_time_minutes_nearest_tier"]
+    ptv_mode = row["MODE"]
+    ptv_mode_weights = dict({m: len(PTV_MODES) - i for i, m in enumerate(PTV_MODES)})
+    print(f"ptv_mode_weights: {ptv_mode_weights}")
+    ptv_mode_weight = ptv_mode_weights.get(ptv_mode, 0.0)
+    if tier is None:
+        return 0
+    # Map tier to elevation (0-height range) + height * mode weight
+    # This means each mode has their own "stratosphere" of elevation
+    # Lower tiers (closer to city) have higher elevation
+    max_tier = 60  # Assuming maximum tier even though I know max commute time can be like 5-6 hours
+    offset = height * ptv_mode_weight
+    
+    v = int(height * (1.0 - (min(tier, max_tier) / max_tier)) + offset)
+    print(f"get_hull_elevation: {tier=} {ptv_mode=} {ptv_mode_weight=} {offset=} {v=}")
+    return v
 
 
 gdf_ptv_hulls = gpd.read_parquet(PTV_HULLS)
@@ -367,15 +386,21 @@ tiers = range(
 
 # gdf_ptv_hulls = gdf_ptv_hulls[gdf_ptv_hulls['transit_time_minutes_nearest_tier'].isin(tiers)]
 gdf_ptv_hulls["color"] = gdf_ptv_hulls.apply(get_hull_color, axis=1)
+gdf_ptv_hulls["elevation"] = gdf_ptv_hulls.apply(get_hull_elevation, axis=1)
+print(f"{gdf_ptv_hulls['elevation'].unique()=}")
 # Create a layer for the commute time hull polygons
 ptv_commute_hulls_layer = pdk.Layer(
     "GeoJsonLayer",
     data=gdf_ptv_hulls,
     get_fill_color=[0, 0, 0, 0],  # Use the calculated color
     get_line_color="color",  # Light white border
+    # extruded=True,
+    # wireframe=True,
+    # get_elevation="elevation / 100.0",
+    get_line_width=5,
     line_width_min_pixels=5,
     pickable=True,
-    auto_highlight=True,
+    auto_highlight=False,
 )
 
 # Also keep the original points to show station locations
@@ -414,7 +439,7 @@ for mode in MODES.keys():
         print(f"=========={mode} {tier} ==========")
 
         isochrone_concatenated_path = pathlib.Path(
-            f"data/isochrones_concatenated/{mode}/{tier}.geoparquet"
+            f"data/isochrones_concatenated/{mode}/{tier}.parquet"
         )
         gdf_isochrones_concatenated[mode][tier] = gpd.read_parquet(isochrone_concatenated_path)
 

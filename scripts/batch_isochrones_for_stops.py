@@ -21,10 +21,12 @@ from utils import (
     MAPBOX_PROFILE_MAPPING,
     PTV_TRANSPORT_MODES,
     TRANSPORT_MODES,
+    OUTPUT_BASE,
     iterate_stop_modes,
     load_stops,
     make_request_with_retry,
 )
+# TODO: cross check all files in output cache are still relevant and match the current list of stops and clean up trash files.
 
 # Load environment variables from .env file
 load_dotenv()
@@ -76,6 +78,9 @@ def status():
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     print(f"{gdf.columns=}")
 
+    all_cached_files = set(OUTPUT_BASE.rglob("*.geojson"))
+    print(f"Found {len(all_cached_files)} cached isochrone files.")
+
     expected_count = {}
     cached_count = {}
     expected_total = 0
@@ -86,6 +91,8 @@ def status():
             cached_count[(mode, ptv_mode)] = 0
 
     for _, row, _, _, mode, out_file in iterate_stop_modes(gdf):
+        if out_file in all_cached_files:
+            all_cached_files.remove(out_file)
         ptv_mode = row.get("MODE", None)
         if ptv_mode is None:
             print(f"❌ Missing PTV_MODE for stop {row.get('STOP_ID', 'unknown')}, skipping.")
@@ -108,6 +115,10 @@ def status():
             print(
                 f"{mode.upper():<16} {ptv_mode.upper():<16}: {expectations_str} {cached_percent_str}"
             )
+
+    print(f"Remaining files to process: {len(all_cached_files)}")
+    for file in all_cached_files:
+        print(f"  - {file}")
     expected_total = sum(expected_count.values())
     cached_total = sum(cached_count.values())
     cached_total_percent = cached_total / expected_total * 100.0 if expected_total > 0 else 100.0
