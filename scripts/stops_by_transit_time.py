@@ -12,6 +12,7 @@ to Southern Cross Station, and save the results as a GeoJSON file.
 #   "pandas",
 #   "pyarrow",
 #   "requests",
+#   "tqdm",
 # ]
 # ///
 
@@ -24,13 +25,16 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import geopandas as gpd
+from tqdm import tqdm
 import googlemaps
 import pandas as pd
 from dotenv import load_dotenv
 from utils import min_max_normalize, save_geodataframe
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
+# Load environment variables
+load_dotenv()
 
+SCRIPT_DIR = Path(__file__).parent.resolve()
 
 HULL_TIER_SIZE = 5  # minutes
 CONCAVE_HULL_RATIO = 0.6  # Ratio for concave hull generation
@@ -47,10 +51,9 @@ OUTPUT_PARQUET = OUTPUT_BASE / "stops_with_commute_times.parquet"
 OUTPUT_HULL_GEOJSON = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
 
 # Setup logging
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+
 
 
 def get_transit_time(gmaps, origin_lat, origin_lng, destination):
@@ -75,7 +78,7 @@ def get_transit_time(gmaps, origin_lat, origin_lng, destination):
         return duration_minutes, distance_km
 
     except (KeyError, IndexError) as e:
-        logger.error(f"Error parsing transit data: {e}")
+        log.error(f"Error parsing transit data: {e}")
         return None, None
 
 
@@ -88,14 +91,15 @@ def cache_check(gdf):
     """Check if transit times are already cached for the stops in the GeoDataFrame"""
     expected = 0
     cached = 0
-    for _, stop in gdf.iterrows():
+    total_rows = len(gdf)  # Ensure gdf is not empty
+    for _, stop in tqdm(gdf.iterrows(), total=total_rows, desc="Checking cache"):
         name = stop["STOP_NAME"]
         output = TRANSIT_TIME_CACHE / normalised_stop_name(name)
         expected += 1
         if output.exists():
             cached += 1
 
-    logger.info(f"Cached {cached} / {expected}  {cached / expected * 100.0:.2f}% ")
+    log.info(f"Cached {cached} / {expected}  {cached / expected * 100.0:.2f}% ")
 
 
 def create_hulls(gdf):
@@ -117,19 +121,16 @@ def create_hulls(gdf):
         min_max_normalize(gdf_ptv_stops["transit_time_minutes_nearest_tier"]) * 0.5
         + 0.5  # Normalized to [0.5, 1.0] to be able to be used for opacity or saturation
     )
-    # print(gdf_ptv_stops["transit_time_minutes_nearest_tier_z"])
 
     # Group stops by MODE and transit_time_minutes_nearest_tier to create hulls
     hull_tiers = []
 
     # Process each mode
     for mode in PTV_MODES:
-        # print(f"Processing mode: {mode}")
         mode_stops = gdf_ptv_stops[gdf_ptv_stops["MODE"] == mode]
 
         # First, get all unique tiers and sort them since we will accumulate them
         all_tiers = sorted(mode_stops["transit_time_minutes_nearest_tier"].unique())
-        # print(f"  Found tiers: {all_tiers}")
 
         # Store hulls for each tier to build cumulative hulls
         tier_hulls = {}
@@ -140,14 +141,14 @@ def create_hulls(gdf):
             cumulative_stops = mode_stops[mode_stops["transit_time_minutes_nearest_tier"] <= tier]
 
             if len(cumulative_stops) < 3:
-                print(
+                log.debug(
                     f"  Skipping {mode} tier {tier} - not enough points ({len(cumulative_stops)})"
                 )
                 continue
 
-            # print(
-            #     f"  Creating cumulative hull for {mode} tier {tier} with {len(cumulative_stops)} points"
-            # )
+            log.debug(
+                f"  Creating cumulative hull for {mode} tier {tier} with {len(cumulative_stops)} points"
+            )
 
             # Convert the points to a MultiPoint object
             
@@ -204,7 +205,7 @@ def create_hulls(gdf):
 def main():
     """Process stops and calculate transit times to Southern Cross Station"""
     if not GOOGLE_MAPS_API_KEY:
-        logger.error("Google Maps API key not provided. Set GOOGLE_MAPS_API_KEY in .env file.")
+        log.error("Google Maps API key not provided. Set GOOGLE_MAPS_API_KEY in .env file.")
         return
 
     # Initialize Google Maps client
@@ -212,7 +213,7 @@ def main():
 
     # Load stops
     stops_gdf = gpd.read_parquet(STOPS)
-    logger.info(f"Loaded {len(stops_gdf)} stops")
+    log.info(f"Loaded {len(stops_gdf)} stops")
 
     cache_check(stops_gdf)
 
@@ -232,14 +233,14 @@ def main():
                 transit_times = json.loads(output.read_text())
 
             else:
-                logger.info(f"Processing stop {i + 1}/{len(stops_gdf)}: {name}")
+                log.info(f"Processing stop {i + 1}/{len(stops_gdf)}: {name}")
 
                 # Get transit details (already in minutes and km)
                 duration_minutes, distance_km = get_transit_time(gmaps, y, x, SOUTHERN_CROSS)
 
                 # Skip if no transit option found
                 if duration_minutes is None:
-                    logger.warning(f"No transit option found for {name}")
+                    log.warning(f"No transit option found for {name}")
                     continue
 
                 if duration_minutes is not None:
@@ -264,11 +265,11 @@ def main():
             stops_with_data.append(stop_record)
 
         except (ValueError, KeyError, AttributeError) as e:
-            logger.error(f"Error processing stop {stop.get('STOP_ID', 'Unknown')}: {e}")
+            log.error(f"Error processing stop {stop.get('STOP_ID', 'Unknown')}: {e}")
 
     # Create GeoDataFrame with transit data
     if not stops_with_data:
-        logger.error("No transit data found for any stops")
+        log.error("No transit data found for any stops")
         return
 
     result_gdf = gpd.GeoDataFrame(stops_with_data, crs=stops_gdf.crs)
@@ -281,16 +282,19 @@ def main():
 
     # Show statistics
     durations = result_gdf["transit_time_minutes"]
-    logger.info(
+    log.info(
         f"Transit time stats (minutes): min={durations.min():.1f}, "
         f"max={durations.max():.1f}, mean={durations.mean():.1f}, "
         f"median={durations.median():.1f}, count={len(durations)}"
     )
 
-    logger.info(f"Results saved to {OUTPUT_GEOJSON} and {OUTPUT_PARQUET}")
+    log.info(f"Results saved to {OUTPUT_GEOJSON} and {OUTPUT_PARQUET}")
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
 
     main()

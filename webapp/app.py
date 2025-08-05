@@ -62,7 +62,7 @@ class App(pn.viewable.Viewer):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.app = pn.pane.DeckGL(self.spec, sizing_mode="stretch_both", height=800)
+        self.app = pn.pane.DeckGL(self.spec, sizing_mode="stretch_width", height=720)
         self._update_layers()
         self.app.param.watch(self._update_layers, "click_state")
         self._playing = False

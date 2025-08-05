@@ -4,7 +4,8 @@
 #   "requests>=2.31.0",
 #   "pyyaml>=6.0.1",
 #   "geopandas",
-#   "python-dotenv>=1.0.0"
+#   "python-dotenv>=1.0.0",
+#   "tqdm",
 # ]
 # ///
 
@@ -14,6 +15,7 @@ import os
 import sys
 import time
 from pathlib import Path
+import logging
 
 import requests
 from dotenv import load_dotenv
@@ -27,6 +29,8 @@ from utils import (
     make_request_with_retry,
 )
 # TODO: cross check all files in output cache are still relevant and match the current list of stops and clean up trash files.
+
+log = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -76,10 +80,10 @@ def get_isochrone_mapbox(lat, lon, mode, countour_times, api_key, max_retries=10
 def status():
     # Load stops
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
-    print(f"{gdf.columns=}")
+    log.info(f"{gdf.columns=}")
 
     all_cached_files = set(OUTPUT_BASE.rglob("*.geojson"))
-    print(f"Found {len(all_cached_files)} cached isochrone files.")
+    log.info(f"Found {len(all_cached_files)} cached isochrone files.")
 
     expected_count = {}
     cached_count = {}
@@ -95,7 +99,7 @@ def status():
             all_cached_files.remove(out_file)
         ptv_mode = row.get("MODE", None)
         if ptv_mode is None:
-            print(f"❌ Missing PTV_MODE for stop {row.get('STOP_ID', 'unknown')}, skipping.")
+            log.warning(f"❌ Missing PTV_MODE for stop {row.get('STOP_ID', 'unknown')}, skipping.")
             continue
 
         expected_count[(mode, ptv_mode)] += 1
@@ -112,19 +116,19 @@ def status():
                 else 100.0
             )
             cached_percent_str = f"{cached_percent:.2f}%"
-            print(
+            log.info(
                 f"{mode.upper():<16} {ptv_mode.upper():<16}: {expectations_str} {cached_percent_str}"
             )
 
-    print(f"Remaining files to process: {len(all_cached_files)}")
+    log.info(f"Remaining files to process: {len(all_cached_files)}")
     for file in all_cached_files:
-        print(f"  - {file}")
+        log.info(f"  - {file}")
     expected_total = sum(expected_count.values())
     cached_total = sum(cached_count.values())
     cached_total_percent = cached_total / expected_total * 100.0 if expected_total > 0 else 100.0
     cached_total_percent_str = f"{cached_total_percent:.2f}%"
     t = "TOTAL"
-    print(
+    log.info(
         f"{t:<33}: expected {expected_total:5d}\tcached {cached_total:5d}\tremaining {expected_total - cached_total:5d}\t {cached_total_percent_str}"
     )
 
@@ -141,15 +145,15 @@ def dry_run(limit):
 
     for idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
         if out_file.exists():
-            # print(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
+            # log.info(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
             continue
 
         if count >= limit:
-            print(f"Reached limit of {limit} isochrones, stopping.")
+            log.info(f"Reached limit of {limit} isochrones, stopping.")
             return
         ptv_mode = row.get("MODE", None)
         count += 1
-        print(f"DRY RUN: {mode} {stop_id} ({ptv_mode}:{stop_name}) to {out_file}")
+        log.info(f"DRY RUN: {mode} {stop_id} ({ptv_mode}:{stop_name}) to {out_file}")
 
 
 def scrape(limit):
@@ -164,7 +168,7 @@ def scrape(limit):
 
         try:
             if count >= limit:
-                print(f"Reached limit of {limit} isochrones, stopping.")
+                log.info(f"Reached limit of {limit} isochrones, stopping.")
                 return
 
             # Create output directory if needed
@@ -186,18 +190,22 @@ def scrape(limit):
 
             # Save result
             out_file.write_text(json.dumps(result, indent=2))
-            print(f"✅ Saved {ptv_mode} {mode} {stop_id} ({stop_name}) to {out_file}")
+            log.info(f"✅ Saved {ptv_mode} {mode} {stop_id} ({stop_name}) to {out_file}")
 
             count += 1
             time.sleep(3)  # Avoid hitting API rate limits
 
         except requests.HTTPError as e:
-            print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: HTTP error {e}")
+            log.error(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: HTTP error {e}")
         except Exception as e:
-            print(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: {e}")
+            log.error(f"❌ Failed for stop {stop_id} ({stop_name}), mode {mode}: {e}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     parser = argparse.ArgumentParser(
         description="Batch process isochrones for public transport stops"
     )

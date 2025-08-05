@@ -44,11 +44,7 @@ from shapely.geometry import LineString, Point
 load_dotenv()
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Get the path of this script
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -72,7 +68,7 @@ class RealEstateProcessor:
         if google_maps_api_key:
             self.gmaps = googlemaps.Client(key=google_maps_api_key)
         else:
-            logger.warning(
+            log.warning(
                 "Google Maps API key not provided. Commute time calculations will be skipped."
             )
 
@@ -85,12 +81,11 @@ class RealEstateProcessor:
         Args:
             origin: Origin address
             destinations: List of destination dictionaries with name and address
-
         Returns:
             List of commute results with travel times for different modes
         """
         if not self.gmaps:
-            logger.warning("Google Maps client not initialized. Skipping commute calculations.")
+            log.warning("Google Maps client not initialized. Skipping commute calculations.")
             return []
 
         commute_results = []
@@ -100,10 +95,10 @@ class RealEstateProcessor:
             dest_address = destination.get("address", "")
 
             if not dest_address:
-                logger.warning(f"No address found for destination {dest_name}. Skipping.")
+                log.warning(f"No address found for destination {dest_name}. Skipping.")
                 continue
 
-            logger.info(f"Calculating commute from {origin} to {dest_name} ({dest_address})")
+            log.info(f"Calculating commute from {origin} to {dest_name} ({dest_address})")
 
             commute_data = {
                 "destination_name": dest_name,
@@ -162,7 +157,7 @@ class RealEstateProcessor:
                     time.sleep(0.2)
 
                 except Exception as e:
-                    logger.error(f"Error calculating {mode} commute: {e}")
+                    log.error(f"Error calculating {mode} commute: {e}")
                     commute_data["modes"][mode] = {"error": str(e)}
 
             commute_results.append(commute_data)
@@ -182,20 +177,20 @@ class RealEstateProcessor:
         Returns:
             Dictionary with property details and commute times
         """
-        logger.info(f"Processing candidate: {url}")
+        log.info(f"Processing candidate: {url}")
 
         # Extract property address
         address = await self.extract_address_from_url(url)
 
         if not address:
-            logger.warning(f"Could not extract address for URL: {url}")
+            log.warning(f"Could not extract address for URL: {url}")
             return {
                 "url": url,
                 "error": "Could not extract address",
                 "processed_at": datetime.now().isoformat(),
             }
 
-        logger.info(f"Extracted address: {address}")
+        log.info(f"Extracted address: {address}")
 
         # Calculate commute times
         commute_times = self.calculate_commute_times(address, commute_destinations)
@@ -221,7 +216,7 @@ class RealEstateProcessor:
             Path to the saved file
         """
         if result.get("error"):
-            logger.error(f"Error processing result: {result['error']}")
+            log.error(f"Error processing result: {result['error']}")
             return ""
 
         # Generate a filepath based on the URL
@@ -230,7 +225,7 @@ class RealEstateProcessor:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
 
-        logger.info(f"Saved result to {filepath}")
+        log.info(f"Saved result to {filepath}")
         return str(filepath)
 
     def output_file_for_url(self, url: str) -> Path:
@@ -262,7 +257,7 @@ class RealEstateProcessor:
                 location = geocode_result[0]["geometry"]["location"]
                 return location["lat"], location["lng"]
         except Exception as e:
-            logger.error(f"Error geocoding address {address}: {e}")
+            log.error(f"Error geocoding address {address}: {e}")
         return None, None
 
     def save_geojson_result(self, result: dict[str, Any]) -> str:
@@ -275,7 +270,7 @@ class RealEstateProcessor:
             Path to the saved file or empty string if not saved
         """
         if result.get("error"):
-            logger.error(f"Error processing result: {result['error']}")
+            log.error(f"Error processing result: {result['error']}")
             return ""
 
         # Generate a filepath based on the address
@@ -371,18 +366,18 @@ class RealEstateProcessor:
                                             }
                                         )
                     except Exception as e:
-                        logger.error(
+                        log.error(
                             f"Error getting {mode} polyline for {result['address']} to {dest_address}: {e}"
                         )
 
         # Only save if there is at least one geometry
         records = [r for r in records if r["geometry"] is not None]
         if not records:
-            logger.warning(f"No geometry for {result['address']}, not saving GeoJSON.")
+            log.warning(f"No geometry for {result['address']}, not saving GeoJSON.")
             return ""
         gdf = gpd.GeoDataFrame(records, crs="EPSG:4326")
         gdf.to_file(filepath, driver="GeoJSON")
-        logger.info(f"Saved GeoJSON result to {filepath}")
+        log.info(f"Saved GeoJSON result to {filepath}")
         return str(filepath)
 
 
@@ -392,7 +387,7 @@ def load_yaml_file(filepath: str) -> Any:
         with open(filepath, encoding="utf-8") as f:
             return yaml.safe_load(f)
     except (yaml.YAMLError, OSError) as e:
-        logger.error(f"Error loading YAML file {filepath}: {e}")
+        log.error(f"Error loading YAML file {filepath}: {e}")
         return None
 
 
@@ -400,27 +395,27 @@ async def main():
     """Main function to process real estate candidates."""
     # Check if Google Maps API key is provided
     if not GOOGLE_MAPS_API_KEY:
-        logger.warning("Google Maps API key not provided. Set GOOGLE_MAPS_API_KEY in .env file.")
+        log.warning("Google Maps API key not provided. Set GOOGLE_MAPS_API_KEY in .env file.")
 
     # Load candidates (now addresses directly)
     candidate_addresses = load_yaml_file(CANDIDATES_YAML)
     if not candidate_addresses or not isinstance(candidate_addresses, list):
-        logger.error(
+        log.error(
             f"Invalid or missing candidates in {CANDIDATES_YAML}. Expected a list of addresses."
         )
         return
 
-    logger.info(f"Loaded {len(candidate_addresses)} candidate addresses from {CANDIDATES_YAML}")
+    log.info(f"Loaded {len(candidate_addresses)} candidate addresses from {CANDIDATES_YAML}")
 
     # Load commute destinations
     commute_destinations = load_yaml_file(COMMUTES_YAML)
     if not commute_destinations or not isinstance(commute_destinations, list):
-        logger.error(
+        log.error(
             f"Invalid or missing destinations in {COMMUTES_YAML}. Expected a list of destinations."
         )
         return
 
-    logger.info(f"Loaded {len(commute_destinations)} commute destinations from {COMMUTES_YAML}")
+    log.info(f"Loaded {len(commute_destinations)} commute destinations from {COMMUTES_YAML}")
 
     # Transform commute destinations to expected format
     formatted_destinations = []
@@ -434,7 +429,7 @@ async def main():
                 "lon": dest_details.get("lon"),
             }
             formatted_destinations.append(formatted_dest)
-            logger.info(f"Added commute destination: {dest_name} at {formatted_dest['address']}")
+            log.info(f"Added commute destination: {dest_name} at {formatted_dest['address']}")
 
     # Initialize processor
     processor = RealEstateProcessor(GOOGLE_MAPS_API_KEY)
@@ -449,10 +444,10 @@ async def main():
                 file_path.exists()
                 and file_path.stat().st_mtime > Path(CANDIDATES_YAML).stat().st_mtime
             ):
-                logger.info(f"SKIP {address}, already processed: {file_path}")
+                log.info(f"SKIP {address}, already processed: {file_path}")
                 continue
 
-            logger.info(f"Processing: {address}")
+            log.info(f"Processing: {address}")
 
             # Calculate commute times for this address
             commute_times = processor.calculate_commute_times(address, formatted_destinations)
@@ -482,11 +477,11 @@ async def main():
 
             # Add a small delay between API requests
             delay = 1 + (secrets.randbelow(20) / 10)
-            logger.debug(f"Waiting {delay:.1f} seconds before next request")
+            log.debug(f"Waiting {delay:.1f} seconds before next request")
             await asyncio.sleep(delay)
 
         except Exception as e:
-            logger.error(f"Error processing candidate address {address}: {e}")
+            log.error(f"Error processing candidate address {address}: {e}")
 
     # Save summary
     summary = {
@@ -499,11 +494,15 @@ async def main():
     with open(Path(OUTPUT_DIR) / "processing_summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
-    logger.info(
+    log.info(
         f"Processing completed: {summary['successful_processing']} successful, {summary['failed_processing']} failed"
     )
 
 
 if __name__ == "__main__":
     # Using asyncio.run (Python 3.12 as per script header)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     asyncio.run(main())

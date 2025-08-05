@@ -4,16 +4,21 @@
 #   "geopandas",
 #   "pyarrow",
 #   "shapely",
-#   "requests"
+#   "requests",
+#   "tqdm"
 # ]
 # ///
 
 import pathlib
 from pathlib import Path
+import logging
 
 import geopandas as gpd
 import pandas as pd
 from utils import dirty, save_geodataframe
+
+
+log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -57,7 +62,7 @@ def check_output_up_to_date():
 
         if dirty([selected_output_file, unioned_output_file], input_file):
             files_to_process[target] = input_file
-            print(f"{target} needs processing.")
+            log.info(f"{target} needs processing.")
 
     return files_to_process
 
@@ -78,7 +83,7 @@ def extract_postcode_polygons():
     # Load the GeoJSON file
     work_to_do = check_output_up_to_date().items()
     if len(work_to_do) == 0:
-        print("All outputs are up to date. No work to do.")
+        log.info("All outputs are up to date. No work to do.")
         return
 
     postcode_boundaries = gpd.read_parquet(POSTCODE_POLYGONS)
@@ -92,7 +97,7 @@ def extract_postcode_polygons():
     gdf_stops_trams = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAM"])].copy()
 
     for target, input_file in work_to_do:
-        print(f"Processing target: {target} with input file: {input_file}")
+        log.info(f"Processing target: {target} with input file: {input_file}")
         if target == "postcodes":
             gdf_polygons = filter_for_target(
                 target, postcode_boundaries, gdf_stops, "POA_CODE21", postcode_list
@@ -103,7 +108,7 @@ def extract_postcode_polygons():
             gdf_polygons = filter_for_target(target, postcode_boundaries, gdf_stops_trams_trains)
         else:
             # For other targets, load the specific boundary file
-            print(
+            log.info(
                 f"Loading input file: {input_file} {pathlib.Path(input_file).stat().st_size / 1024 / 1024:.2f} MB"
             )
             gdf_input = gpd.read_parquet(input_file)
@@ -121,5 +126,9 @@ def extract_postcode_polygons():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     extract_postcode_polygons()
-    print("Postcode polygons extracted and saved.")
+    log.info("Postcode polygons extracted and saved.")

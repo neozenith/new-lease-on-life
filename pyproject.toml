@@ -19,6 +19,7 @@ dependencies = [
     "geopandas>=1.1.1",
     "pyarrow>=21.0.0",
     "requests>=2.32.4",
+    "tqdm>=4.67.1",
 ]
 
 
@@ -89,3 +90,37 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 
+[tool.rumdl]
+line-length = 100
+disable = ["MD013", "MD034"]
+exclude = [
+    # Common directories to exclude
+    ".git",
+    ".github",
+    "node_modules",
+    "vendor",
+    "dist",
+    "build",
+]
+respect-gitignore = true
+
+# Rule-specific configurations (uncomment and modify as needed)
+
+# [tool.rumdl.MD003]
+# style = "atx"  # Heading style (atx, atx_closed, setext)
+
+# [tool.rumdl.MD004]
+# style = "asterisk"  # Unordered list style (asterisk, plus, dash, consistent)
+
+# [tool.rumdl.MD007]
+# indent = 2  # Unordered list indentation
+
+# [tool.rumdl.MD013]
+# line_length = 100  # Line length
+# code_blocks = false  # Exclude code blocks from line length check
+# tables = false  # Exclude tables from line length check
+# headings = true  # Include headings in line length check
+
+# [tool.rumdl.MD044]
+# names = ["rumdl", "Markdown", "GitHub"]  # Proper names that should be capitalized correctly
+# code_blocks_excluded = true  # Exclude code blocks from proper name check

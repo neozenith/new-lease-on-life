@@ -16,6 +16,7 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 # ///
 import logging
 from pathlib import Path
+import argparse
 
 import geopandas as gpd
 from dotenv import load_dotenv
@@ -25,12 +26,7 @@ from utils import dirty, unzip_archive
 # Load environment variables from .env file
 load_dotenv()
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s",
-)
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # Constants
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -50,7 +46,7 @@ def find_shapefiles(data_dir: Path) -> list[Path]:
     Returns:
         List of paths to shapefiles
     """
-    logger.info(f"Searching for shapefiles in {data_dir}")
+    log.info(f"Searching for shapefiles in {data_dir}")
 
     # Find all .shp files in the data directory and its subdirectories
     shapefiles = list(data_dir.glob("**/*.shp"))
@@ -58,9 +54,9 @@ def find_shapefiles(data_dir: Path) -> list[Path]:
     # Log the results
     if shapefiles:
         for shp in shapefiles:
-            logger.info(f"Found shapefile: {shp} {shp.stat().st_size / 1024 / 1024:.2f}Mb")
+            log.info(f"Found shapefile: {shp} {shp.stat().st_size / 1024 / 1024:.2f}Mb")
     else:
-        logger.warning(f"No shapefiles found in {data_dir} or its subdirectories")
+        log.warning(f"No shapefiles found in {data_dir} or its subdirectories")
 
     return shapefiles
 
@@ -93,20 +89,20 @@ def export_shapefile_to_geojson(
 
         # Guard condition to skip if up to date
         if not dirty(output_file, shapefile_path):
-            logger.info(
+            log.info(
                 f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb"
             )
-            logger.info(
+            log.info(
                 f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb"
             )
             geoparquet_path = output_file.with_suffix(".parquet")
-            logger.info(
+            log.info(
                 f"Found existing up-to-date geoparquet_file: {geoparquet_path} {geoparquet_path.stat().st_size / 1024 / 1024:.2f}Mb"
             )
 
             return output_file
 
-        logger.info(
+        log.info(
             f"Reading shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb"
         )
 
@@ -114,21 +110,21 @@ def export_shapefile_to_geojson(
         gdf = gpd.read_file(shapefile_path)
 
         # Log the number of features and CRS
-        logger.info(f"Read {len(gdf)} features with CRS: {gdf.crs}")
+        log.info(f"Read {len(gdf)} features with CRS: {gdf.crs}")
 
         # Ensure CRS is WGS84 for web compatibility
         if gdf.crs != "EPSG:4326":
-            logger.info(f"Reprojecting from {gdf.crs} to EPSG:4326 (WGS84)")
+            log.info(f"Reprojecting from {gdf.crs} to EPSG:4326 (WGS84)")
             gdf = gdf.to_crs("EPSG:4326")
 
         # Apply simplification if requested
         if simplify_tolerance is not None and simplify_tolerance > 0:
-            logger.info(f"Simplifying geometries with tolerance: {simplify_tolerance}")
+            log.info(f"Simplifying geometries with tolerance: {simplify_tolerance}")
             original_size = gdf.memory_usage(deep=True).sum()
             gdf["geometry"] = gdf["geometry"].simplify(simplify_tolerance, preserve_topology=True)
             new_size = gdf.memory_usage(deep=True).sum()
             reduction = (original_size - new_size) / original_size * 100
-            logger.info(f"Simplification reduced size by approximately {reduction:.2f}%")
+            log.info(f"Simplification reduced size by approximately {reduction:.2f}%")
 
         # Filter columns if requested
         if filter_columns:
@@ -137,22 +133,22 @@ def export_shapefile_to_geojson(
             valid_columns = list(available_columns.intersection(requested_columns))
 
             if valid_columns:
-                logger.info(f"Filtering to columns: {valid_columns}")
+                log.info(f"Filtering to columns: {valid_columns}")
                 gdf = gdf[valid_columns]
             else:
-                logger.warning("No requested columns found in dataset, keeping all columns")
+                log.warning("No requested columns found in dataset, keeping all columns")
 
         # Export to GeoJSON
-        logger.info(f"Exporting to GeoJSON: {output_file}")
+        log.info(f"Exporting to GeoJSON: {output_file}")
         output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent directory exists
         gdf.to_file(output_file, driver="GeoJSON")
         gdf.to_parquet(output_file.with_suffix(".parquet"), engine="pyarrow", index=False)
 
-        logger.info(f"Successfully exported to {output_file}")
+        log.info(f"Successfully exported to {output_file}")
         return output_file
 
     except Exception as e:
-        logger.error(f"Error exporting shapefile {shapefile_path}: {str(e)}")
+        log.error(f"Error exporting shapefile {shapefile_path}: {str(e)}")
         raise
 
 
@@ -180,10 +176,10 @@ def process_shapefiles(
     # Filter by suffix if requested
     if filter_by_suffix:
         shapefiles = [shp for shp in shapefiles if shp.name.endswith(filter_by_suffix)]
-        logger.info(f"Filtered to {len(shapefiles)} shapefiles ending with '{filter_by_suffix}'")
+        log.info(f"Filtered to {len(shapefiles)} shapefiles ending with '{filter_by_suffix}'")
 
     if not shapefiles:
-        logger.warning("No shapefiles to process")
+        log.warning("No shapefiles to process")
         return []
 
     exported_files = []
@@ -194,14 +190,18 @@ def process_shapefiles(
             geojson_path = export_shapefile_to_geojson(shapefile, output_dir, simplify_tolerance)
             exported_files.append(geojson_path)
         except Exception as e:
-            logger.error(f"Failed to export {shapefile}: {e}")
+            log.error(f"Failed to export {shapefile}: {e}")
 
-    logger.info(f"Successfully exported {len(exported_files)} of {len(shapefiles)} shapefiles")
+    log.info(f"Successfully exported {len(exported_files)} of {len(shapefiles)} shapefiles")
     return exported_files
 
 
 if __name__ == "__main__":
-    import argparse
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
+    
 
     parser = argparse.ArgumentParser(description="Export shapefiles to GeoJSON format")
     parser.add_argument(
@@ -230,12 +230,12 @@ if __name__ == "__main__":
         # Process a single file
         single_file_path = Path(args.single_file)
         if not single_file_path.exists():
-            logger.error(f"Shapefile not found: {args.single_file}")
+            log.error(f"Shapefile not found: {args.single_file}")
         else:
             try:
                 export_shapefile_to_geojson(single_file_path, args.output_dir, args.simplify)
             except Exception as e:
-                logger.error(f"Error processing file: {e}")
+                log.error(f"Error processing file: {e}")
     else:
         # Process all files
         process_shapefiles(args.data_dir, args.output_dir, args.simplify, args.filter_suffix)

@@ -23,6 +23,7 @@ Shows a map centered and zoomed to the bounding box:
 # ///
 import os
 import pathlib
+import logging
 
 import geopandas as gpd
 import panel as pn
@@ -34,6 +35,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Disable tornado and bokeh loggers - only show errors
+logging.getLogger("tornado").setLevel(logging.ERROR)
+logging.getLogger("tornado.access").setLevel(logging.ERROR)
+logging.getLogger("tornado.application").setLevel(logging.ERROR)
+logging.getLogger("tornado.general").setLevel(logging.ERROR)
+logging.getLogger("bokeh").setLevel(logging.ERROR)
+
+log = logging.getLogger(__name__)
 
 def hsv_to_rgb(h: float, s: float, v: float, a: float) -> tuple[float, float, float, float]:
     if s:
@@ -498,10 +507,16 @@ for rental_candidate in pathlib.Path("data/candidate_real_estate/").glob("*.geoj
         get_fill_color=[255, 0, 0, 128],  # Semi-transparent red
         get_line_color=[255, 0, 0, 255],  # Red lines
         line_width_min_pixels=12,
+        get_line_width=2,
+        get_point_radius=10,
+        get_point_color=[255, 0, 0, 255],  # Red
+        get_point_radius_min_pixels=5,
+        get_point_radius_max_pixels=20,
+        
         pickable=True,
         auto_highlight=True,
     )
-    # LAYERS.append(rental_layer)
+    LAYERS.append(rental_layer)
 
 
 def app_for(layers: list[pdk.Layer]) -> pn.Column:
@@ -548,6 +563,10 @@ def app_for(layers: list[pdk.Layer]) -> pn.Column:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     # LAYERS = []
     app = app_for(LAYERS)
     pn.serve(app, port=5006, show=True, title="Isochrone Viewer")

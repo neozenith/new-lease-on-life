@@ -4,14 +4,18 @@
 #   "geopandas",
 #   "pyarrow",
 #   "shapely",
-#   "requests"
+#   "requests",
+#   "tqdm"
 # ]
 # ///
 
 from pathlib import Path
+import logging
 
 import geopandas as gpd
 from utils import dirty, save_geodataframe
+
+log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -27,7 +31,7 @@ OUTPUT_STOPS_GEOJSON = SCRIPT_DIR.parent / "data/geojson/ptv/stops_within_union.
 
 def extract_stops_within_union():
     if not dirty(OUTPUT_STOPS_GEOJSON, [UNIONED_GEOJSON, STOPS_GEOJSON]):
-        print(f"{OUTPUT_STOPS_GEOJSON} is up to date. Skipping extraction.")
+        log.info(f"{OUTPUT_STOPS_GEOJSON} is up to date. Skipping extraction.")
         return
 
     # Load the unioned postcode polygon
@@ -64,9 +68,13 @@ def extract_stops_within_union():
     # Save the filtered stops to the output GeoJSON file
     save_geodataframe(stops_within, OUTPUT_STOPS_GEOJSON)
 
-    print(stops_within["MODE"].unique())
-    print(f"Wrote {len(stops_within)} unique stops to {OUTPUT_STOPS_GEOJSON}")
+    log.info(f"Unique stop modes: {stops_within['MODE'].unique()}")
+    log.info(f"Wrote {len(stops_within)} unique stops to {OUTPUT_STOPS_GEOJSON}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     extract_stops_within_union()

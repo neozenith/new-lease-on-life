@@ -18,7 +18,8 @@ This project provides tools for geocoding addresses and calculating isochrones u
 - **Build System**: Makefile-driven workflow for data processing pipeline
 
 **Data Flow**:
-```
+
+```text
 Postcodes + Transport Stops → Isochrone API → GeoJSON/GeoParquet Files → PyDeck/DeckGL → Panel Frontend
 ```
 
@@ -44,6 +45,7 @@ Postcodes + Transport Stops → Isochrone API → GeoJSON/GeoParquet Files → P
 ## Commands & Scripts
 
 **Build Commands**:
+
 ```bash
 make all              # Complete data pipeline + start viewer
 make aux_data         # Process postcodes and transport stops
@@ -55,6 +57,7 @@ make rentals          # Process real estate data
 ```
 
 **Development Commands**:
+
 ```bash
 make fix              # Format and lint code with ruff
 uv run <script.py>    # Run individual scripts with dependencies
@@ -69,8 +72,23 @@ uv run <script.py>    # Run individual scripts with dependencies
 ## Configuration
 
 **Environment Variables** (`.env`):
-```
-GRAPHHOPPER_API_KEY=your_api_key_here
+
+Read `.env.sample` for latest defintions of environment variables that should be available.
+
+```sh
+GRAPHHOPPER_API_KEY=your_graphhopper_api_key_here
+
+# Google Maps API key - required for map visualization and geocoding and commuting directions and times
+# Sign up at https://developers.google.com/maps/get-started and get a free API key
+# Note: VITE_GOOGLE_MAPS_API_KEY is used for the frontend
+# and GOOGLE_MAPS_API_KEY is used for the backend
+# Both should be the same key for simplicity
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+
+# Mapbox API token - required for map visualization and isochrones
+# Sign up at https://www.mapbox.com/ and get a free API token
+MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ```
 
 **Project Settings**:
@@ -116,7 +134,7 @@ GRAPHHOPPER_API_KEY=your_api_key_here
 
 ## Claude Code Integration Notes
 
-**Recommended Personas**: 
+**Recommended Personas**:  
 - `--persona-analyzer` for data architecture analysis
 - `--persona-architect` for production architecture planning
 - `--persona-performance` for geospatial optimization
@@ -144,18 +162,11 @@ GRAPHHOPPER_API_KEY=your_api_key_here
 
 ## Future Work & Technical Exploration
 
-**Visualization Framework Comparison**:
-- **Current**: PyDeck (Python wrapper for deck.gl)
-- **Alternative**: Kepler.gl - reportedly better map controls and user interaction features
-- **Analysis Needed**: 
-  - Feature comparison between PyDeck and Kepler.gl for isochrone visualization
-  - Map control capabilities (layers, filters, time animation)
-  - Integration complexity with Panel/HoloViz or alternative frameworks
-  - Performance implications for large geospatial datasets
-  - User experience improvements possible with Kepler.gl
+
 
 **Other Technical Explorations**:
+- Integration with Victorian property data for enhanced analysis
 - Vector tile serving for efficient data delivery
 - Progressive web app capabilities for offline usage
 - Real-time isochrone calculation vs pre-computed results
-- Integration with Victorian property data for enhanced analysis
+

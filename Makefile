@@ -9,14 +9,14 @@ aux_data:
 
 ######### API FETCHING #########
 scrape_isochrones:
-	uv run scripts/batch_isochrones_for_stops.py --status
+	time uv run scripts/batch_isochrones_for_stops.py --status
 
 rentals: 
-	uv run scripts/process_realestate_candidates.py
+	time uv run scripts/process_realestate_candidates.py
 
 ######### DATA TIDY UP #########
 fix_geojson: scrape_isochrones
-	time uv run scripts/fix_geojson.py data/isochrone_cache/ -o data/geojson_fixed/
+	uv run scripts/fix_geojson.py data/isochrone_cache/ -o data/geojson_fixed/
 
 # create the data/isochrones_concatenated/**/*.geojson
 consolidate_isochrones: fix_geojson

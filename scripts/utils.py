@@ -14,6 +14,7 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 #   "pyarrow",
 # ]
 # ///
+from tqdm import tqdm
 import logging
 import re
 import time
@@ -24,7 +25,7 @@ from pathlib import Path
 import geopandas as gpd
 import requests
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
@@ -93,7 +94,7 @@ def load_stops(filter_modes=None):
     mode_order = {mode: idx for idx, mode in enumerate(PTV_TRANSPORT_MODES)}
     gdf = gdf.sort_values("MODE", key=lambda x: x.map(mode_order))
 
-    print(f"Filtered stops: {before} -> {after} unique stops")
+    log.info(f"Filtered stops: {before} -> {after} unique stops")
     if filter_modes:
         gdf = gdf[gdf["MODE"].isin(filter_modes)]
     return gdf
@@ -110,7 +111,7 @@ def iterate_stop_modes(
     Yields:
         Tuple of (idx, row, stop_id, stop_name, mode, out_file)
     """
-    for idx, row in gdf.iterrows():
+    for idx, row in tqdm(gdf.iterrows()):
         stop_id = row.get("STOP_ID", idx)
         stop_name = row.get("STOP_NAME", f"stop_{idx}")
         for mode in TRANSPORT_MODES:
@@ -194,16 +195,16 @@ def unzip_archive(zip_path: Path, extract_to: Path | None = None) -> None:
 
     if extract_to is None:
         extract_to = zip_path.parent / zip_path.stem
-    logger.info(f"Unzipping {zip_path} to {extract_to}")
+    log.info(f"Unzipping {zip_path} to {extract_to}")
 
     if not dirty([f for f in extract_to.rglob("*") if f.is_file()], zip_path):
-        logger.info(f"Skipping extraction, {extract_to} is up to date.")
+        log.info(f"Skipping extraction, {extract_to} is up to date.")
         return
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         zip_ref.extractall(extract_to)
 
-    logger.info(f"Unzipped {zip_path} successfully")
+    log.info(f"Unzipped {zip_path} successfully")
 
 
 def save_geodataframe(gdf: gpd.GeoDataFrame, output_file: Path) -> Path:
@@ -221,7 +222,7 @@ def save_geodataframe(gdf: gpd.GeoDataFrame, output_file: Path) -> Path:
     geoparquet_file = output_file.with_suffix(".parquet")
     gdf.to_file(output_file, driver="GeoJSON")
     gdf.to_parquet(geoparquet_file, engine="pyarrow", index=False)
-    logger.info(
+    log.info(
         f"Saved GeoDataFrame to {output_file} and {geoparquet_file} "
         f"({output_file.stat().st_size / 1024 / 1024:.2f} MB, "
         f"{geoparquet_file.stat().st_size / 1024 / 1024:.2f} MB)"

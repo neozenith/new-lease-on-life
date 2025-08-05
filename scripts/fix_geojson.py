@@ -6,6 +6,7 @@
 #   "pyarrow",
 #   "shapely",
 #   "requests",
+#   "tqdm"
 # ]
 # ///
 """
@@ -16,13 +17,15 @@ standard "features" array in a FeatureCollection.
 
 Can process single files or recursively iterate through directories.
 """
-
+from tqdm import tqdm
 import argparse
 import json
 import sys
 from pathlib import Path
+import logging
 
 import geopandas as gpd
+import pandas as pd
 from utils import (
     PTV_TRANSPORT_MODES,
     dirty,
@@ -30,11 +33,13 @@ from utils import (
     normalise_name,
 )
 
+log = logging.getLogger(__name__)
+
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 def fix_geojson(
-    stops: gpd.GeoDataFrame, input_file: Path, output_file: Path | None = None, name=None
+    stops: gpd.GeoDataFrame | pd.DataFrame, input_file: Path, output_file: Path | None = None, name=None
 ):
     """
     Fix a non-standard GeoJSON file by converting it to a proper FeatureCollection.
@@ -51,20 +56,17 @@ def fix_geojson(
     if output_file is None:
         output_file = input_file
 
-    # compare mtime of input and output file
-    input_path = Path(input_file)
-    output_path = Path(output_file)
+    if not dirty(output_file, input_file):
+        log.debug(
+            f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing."
+        )
+        return True
 
-    # if not dirty(output_path, input_path):
-    #     print(
-    #         f"SKIP: Output file {output_file} is newer than input file {input_file}. Skipping processing."
-    #     )
-    #     return True
-
-    isochrone_mode = input_path.parts[2]
-    stop_id = input_path.stem.split("_")[1]
-    name_prefix_length = len(input_path.stem.split("_")[0]) + len(input_path.stem.split("_")[1]) + 2
-    normalised_stop_name = input_path.stem[name_prefix_length:]
+    # From the cached isochrone filename and the stops GeoDataFrame, extract the stop ID and other metadata about the stop
+    isochrone_mode = input_file.parts[2]
+    stop_id = input_file.stem.split("_")[1]
+    name_prefix_length = len(input_file.stem.split("_")[0]) + len(input_file.stem.split("_")[1]) + 2
+    normalised_stop_name = input_file.stem[name_prefix_length:]
     stop = stops[stops["STOP_ID"] == stop_id]
     row_count_for_stop = stop.shape[0]
     _props = {
@@ -72,42 +74,41 @@ def fix_geojson(
         "STOP_ID": stop_id,
         "normalised_stop_name": normalised_stop_name,
     }
+
+    # If the stop is found add stop PTV mode
     if row_count_for_stop > 0:
         stop = stop.iloc[0]
         _props["MODE"] = stop.MODE
 
-
-        # if normalise_name(stop.STOP_NAME) != normalised_stop_name:
-        #     print(
-        #         f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME}"
-        #     )
-        #     print(f"""
-        #         {isochrone_mode=}
-        #         {stop_id=}
-        #         {normalised_stop_name=}
-        #     """)
-        #     print(f"""
-        #         {stop.name=}
-        #         {stop.geometry=}
-        #         {stop.MODE=}
-        #         {stop.STOP_NAME=}
-        #         {stop.STOP_ID=}
-        #     """)
+        if normalise_name(stop.STOP_NAME) != normalised_stop_name:
+            log.debug(
+                f"!!!!!!!!!!!!!!!!Warning: Normalised stop name {normalised_stop_name} does not match stop.STOP_NAME {stop.STOP_NAME} despite matching STOP_ID {stop_id}."
+            )
+            log.debug(f"""
+                {isochrone_mode=}
+                {stop_id=}
+                {normalised_stop_name=}
+            """)
+            log.debug(f"""
+                {stop.name=}
+                {stop.geometry=}
+                {stop.MODE=}
+                {stop.STOP_NAME=}
+                {stop.STOP_ID=}
+            """)
         _props["STOP_NAME"] = stop.STOP_NAME
     else:
-        print(
+        log.warning(
             f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. DELETING file"
         )
         # Delete input_file
-        input_path.unlink(missing_ok=True)
+        input_file.unlink(missing_ok=True)
+        return False
 
     try:
-        # Read the input file
-        # if input_path.name != "isochrone_vic:rail:STL_stawell_railway_station.geojson":
-        #     return True
 
-        data = json.loads(input_path.read_text(encoding="utf-8"))
-        name = input_path.stem
+        data = json.loads(input_file.read_text(encoding="utf-8"))
+        name = input_file.stem
 
         # Create the proper FeatureCollection structure
         feature_collection = {
@@ -170,21 +171,21 @@ def fix_geojson(
                 "source": "MapBox IsoChrone API",
             }
         else:
-            print(f"Warning: No 'polygons' array found in {input_file}")
+            log.warning(f"Warning: No 'polygons' array found in {input_file}")
             return False
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
-        output_path.write_text(json.dumps(feature_collection, indent=2))
+        output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+        output_file.write_text(json.dumps(feature_collection, indent=2))
 
-        # print(f"Successfully converted {input_file} to standard GeoJSON format")
-        # print(f"Saved to {output_file}")
+        log.debug(f"Successfully converted {input_file} to standard GeoJSON format")
+        log.debug(f"Saved to {output_file}")
         return True
 
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON in {input_file}: {e}")
+        log.error(f"Error parsing JSON in {input_file}: {e}")
         return False
     except Exception as e:
-        print(f"Error processing {input_file}: {e}")
+        log.error(f"Error processing {input_file}: {e}")
         return False
 
 
@@ -236,7 +237,7 @@ def validate_geojson(file_path):
         return False, f"Error validating GeoJSON: {e}"
 
 
-def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path, validate=False):
+def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path, validate=False) -> tuple[int, int, int]:
     """
     Process all GeoJSON files in a directory recursively.
 
@@ -252,15 +253,17 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
     output_path = output_dir
 
     if not input_path.is_dir():
-        print(f"Error: {input_dir} is not a directory")
-        return 0, 0
+        log.error(f"Error: {input_dir} is not a directory")
+        return 0, 0, 0
 
     total_files = 0
     successful_files = 0
     cached_files = 0
 
     # Find all GeoJSON files in the directory and its subdirectories
-    for geojson_file in input_path.glob("**/*.geojson"):
+    geojson_files = list(input_path.rglob("*.geojson"))
+
+    for geojson_file in tqdm(geojson_files, desc="Processing GeoJSON files", total=len(geojson_files)):
         total_files += 1
 
         # Determine the relative path from the input directory
@@ -271,10 +274,16 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
 
         # Ensure the output directory exists
         out_file.parent.mkdir(parents=True, exist_ok=True)
-        # if out_file.exists():
-        #     cached_files += 1
-        #     print(f"Skipping {geojson_file} as it already exists at {out_file}")
-        #     continue
+        if out_file.exists():
+            cached_files += 1
+            if validate:
+                valid, message = validate_geojson(str(out_file))
+                if valid:
+                    log.debug(f"  Validation: {message}")
+                else:
+                    log.warning(f"  Validation failed: {message}")
+            log.debug(f"Skipping {geojson_file} as it already exists at {out_file}")
+            continue
 
         success = fix_geojson(stops, geojson_file, out_file)
 
@@ -283,9 +292,9 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
             if validate:
                 valid, message = validate_geojson(str(out_file))
                 if valid:
-                    print(f"  Validation: {message}")
+                    log.debug(f"  Validation: {message}")
                 else:
-                    print(f"  Validation failed: {message}")
+                    log.warning(f"  Validation failed: {message}")
 
     return total_files, successful_files, cached_files
 
@@ -317,17 +326,16 @@ def main():
     # Check if input is a directory
     if input_path.is_dir():
         if args.output is None:
-            print("Error: When processing a directory, you must specify an output directory")
+            log.error("Error: When processing a directory, you must specify an output directory")
             return 1
 
-        print(f"Processing directory {args.input} recursively...")
+        log.info(f"Processing directory {args.input} recursively...")
         total, successful, cached_files = process_directory(
             stops, Path(args.input), Path(args.output), args.validate
         )
-        print(f"Processed {successful}/{total} files successfully")
-        if cached_files > 0:
-            print(f"Skipped {cached_files} files that were already cached")
-        return 0 if successful == total and total > 0 else 1
+        log.info(f"Processed {successful+cached_files}/{total} files successfully. ({cached_files} files were cached).")
+        
+        return 0 if successful + cached_files == total and total > 0 else 1
 
     # Process single file
     else:
@@ -346,4 +354,8 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
+    )
     sys.exit(main())
