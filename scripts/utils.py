@@ -14,7 +14,6 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 #   "pyarrow",
 # ]
 # ///
-from tqdm import tqdm
 import logging
 import re
 import time
@@ -24,6 +23,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import requests
+from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +175,6 @@ def dirty(output_path: list[Path] | Path, input_paths: list[Path] | Path) -> boo
     if isinstance(input_paths, Path):
         input_paths = [input_paths]
 
-    
     min_output_mtime = min(f.stat().st_mtime for f in output_path)
     max_input_mtime = max(f.stat().st_mtime for f in input_paths)
 

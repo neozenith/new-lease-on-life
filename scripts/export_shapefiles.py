@@ -14,9 +14,9 @@ This script scans the data/ directory for SHP files and converts them to GeoJSON
 #   "pyarrow",
 # ]
 # ///
+import argparse
 import logging
 from pathlib import Path
-import argparse
 
 import geopandas as gpd
 from dotenv import load_dotenv
@@ -201,7 +201,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
-    
 
     parser = argparse.ArgumentParser(description="Export shapefiles to GeoJSON format")
     parser.add_argument(

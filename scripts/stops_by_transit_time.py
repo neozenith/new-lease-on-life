@@ -25,10 +25,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import geopandas as gpd
-from tqdm import tqdm
 import googlemaps
 import pandas as pd
 from dotenv import load_dotenv
+from tqdm import tqdm
 from utils import min_max_normalize, save_geodataframe
 
 # Load environment variables
@@ -52,8 +52,6 @@ OUTPUT_HULL_GEOJSON = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
 
 # Setup logging
 log = logging.getLogger(__name__)
-
-
 
 
 def get_transit_time(gmaps, origin_lat, origin_lng, destination):
@@ -151,15 +149,14 @@ def create_hulls(gdf):
             )
 
             # Convert the points to a MultiPoint object
-            
+
             multi_point = gpd.GeoSeries(cumulative_stops["geometry"].union_all())
-            
+
             # Create a convex hull from all points (the rubber band effect)
             hull = multi_point.concave_hull(
-                ratio=CONCAVE_HULL_RATIO,  
+                ratio=CONCAVE_HULL_RATIO,
                 allow_holes=False,  # Minimum points to form a hull
             )
-            
 
             # Store this tier's hull
             tier_hulls[tier] = hull
@@ -250,15 +247,18 @@ def main():
 
             tier_size = float(HULL_TIER_SIZE)
             # tiers = range(tier_size, 60, tier_size)  # Define tiers from 5 to 55 minutes in increments of tier_size
-            transit_times["transit_time_minutes_nearest_tier"] = round(
-                round(float(transit_times["transit_time_minutes"]), 1) / tier_size
-            ) * tier_size
+            transit_times["transit_time_minutes_nearest_tier"] = (
+                round(round(float(transit_times["transit_time_minutes"]), 1) / tier_size)
+                * tier_size
+            )
 
             # Add stop with transit data - only minutes and kilometers
             stop_record = stop.copy()
             stop_record["transit_time_minutes"] = transit_times.get("transit_time_minutes")
             stop_record["transit_distance_km"] = transit_times.get("transit_distance_km")
-            stop_record["transit_time_minutes_nearest_tier"] = transit_times.get("transit_time_minutes_nearest_tier")
+            stop_record["transit_time_minutes_nearest_tier"] = transit_times.get(
+                "transit_time_minutes_nearest_tier"
+            )
             output.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
             output.write_text(json.dumps(transit_times))
 

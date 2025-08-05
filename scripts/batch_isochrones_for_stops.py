@@ -11,23 +11,24 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
 from pathlib import Path
-import logging
 
 import requests
 from dotenv import load_dotenv
 from utils import (
     MAPBOX_PROFILE_MAPPING,
+    OUTPUT_BASE,
     PTV_TRANSPORT_MODES,
     TRANSPORT_MODES,
-    OUTPUT_BASE,
     iterate_stop_modes,
     load_stops,
     make_request_with_retry,
 )
+
 # TODO: cross check all files in output cache are still relevant and match the current list of stops and clean up trash files.
 
 log = logging.getLogger(__name__)
@@ -143,9 +144,9 @@ def dry_run(limit):
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     count = 0
 
-    for idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
+    for _idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
         if out_file.exists():
-            # log.info(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
+            log.info(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
             continue
 
         if count >= limit:
@@ -161,9 +162,9 @@ def scrape(limit):
     gdf = load_stops(filter_modes=PTV_TRANSPORT_MODES)
     count = 0
 
-    for idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
+    for _idx, row, stop_id, stop_name, mode, out_file in iterate_stop_modes(gdf):
         if out_file.exists():
-            # print(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
+            log.debug(f"🤷🏻‍♂️ SKIP {mode} {stop_id} ({stop_name}): File exists {out_file}")
             continue
 
         try:

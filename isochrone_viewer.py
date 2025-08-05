@@ -21,9 +21,9 @@ Shows a map centered and zoomed to the bounding box:
 #   "shapely",
 # ]
 # ///
+import logging
 import os
 import pathlib
-import logging
 
 import geopandas as gpd
 import panel as pn
@@ -43,6 +43,7 @@ logging.getLogger("tornado.general").setLevel(logging.ERROR)
 logging.getLogger("bokeh").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
+
 
 def hsv_to_rgb(h: float, s: float, v: float, a: float) -> tuple[float, float, float, float]:
     if s:
@@ -138,7 +139,8 @@ ISOCHRONE_TIERS = ["15", "10", "5"]
 # This allows us to easily distinguish between them on the map.
 float_hue_offset = 0.1
 HUE_FOR_MODE = {
-    mode: (float(i) / float(len(ALL_MODES)) + float_hue_offset) % 1.0 for i, mode in enumerate(ALL_MODES)
+    mode: (float(i) / float(len(ALL_MODES)) + float_hue_offset) % 1.0
+    for i, mode in enumerate(ALL_MODES)
 }
 print(f"HUE_FOR_MODE: {HUE_FOR_MODE}")
 isochrone_colors = {}
@@ -288,6 +290,7 @@ gdf_ptv_stops = gpd.read_parquet(PTV_STOPS)
 if "MODE" in gdf_ptv_stops.index.names and "MODE" not in gdf_ptv_stops.columns:
     gdf_ptv_stops = gdf_ptv_stops.reset_index()
 
+
 def get_stop_colour(row):
     mode = row["MODE"]
     tier = row["transit_time_minutes_nearest_tier"]
@@ -318,6 +321,7 @@ def get_stop_colour(row):
             1.0 * saturation,  # link opacity to saturation too
         )
     )
+
 
 gdf_ptv_stops["color"] = gdf_ptv_stops.apply(get_stop_colour, axis=1)
 
@@ -358,6 +362,7 @@ def get_hull_color(row):
         )
     )
 
+
 def get_hull_elevation(row):
     height = 100.0
     tier = row["transit_time_minutes_nearest_tier"]
@@ -372,7 +377,7 @@ def get_hull_elevation(row):
     # Lower tiers (closer to city) have higher elevation
     max_tier = 60  # Assuming maximum tier even though I know max commute time can be like 5-6 hours
     offset = height * ptv_mode_weight
-    
+
     v = int(height * (1.0 - (min(tier, max_tier) / max_tier)) + offset)
     print(f"get_hull_elevation: {tier=} {ptv_mode=} {ptv_mode_weight=} {offset=} {v=}")
     return v
@@ -512,7 +517,6 @@ for rental_candidate in pathlib.Path("data/candidate_real_estate/").glob("*.geoj
         get_point_color=[255, 0, 0, 255],  # Red
         get_point_radius_min_pixels=5,
         get_point_radius_max_pixels=20,
-        
         pickable=True,
         auto_highlight=True,
     )

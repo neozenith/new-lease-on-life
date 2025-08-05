@@ -15,12 +15,13 @@
 # - Create a consolidated geodataframe of all isochrone polygons merged by personal transport mode and tier
 #  - Create a consolidated geodataframe of all isochrone polygons merged by public transport mode, personal transport mode and tier
 
-from tqdm import tqdm
 import logging
 import pathlib
 from pathlib import Path
+
 import geopandas as gpd
 import pandas as pd
+from tqdm import tqdm
 from utils import dirty, save_geodataframe
 
 log = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ ISOCHRONE_CAR = SCRIPT_DIR.parent / "data/geojson_fixed/car/"
 MODES = {"car": ISOCHRONE_CAR, "bike": ISOCHRONE_BIKE, "foot": ISOCHRONE_FOOT}
 ISOCHRONE_TIERS = ["15", "10", "5"]
 OUTPUT_DIR = SCRIPT_DIR.parent / "data/isochrones_concatenated"
+
 
 def main():
     gdf_isochrones: dict[str, dict[str, list[gpd.GeoDataFrame]]] = {
@@ -54,7 +56,7 @@ def main():
         log.info(
             f"Processing isochrones for mode: {mode} from {modality_isochrone_path} {len(input_files)=}"
         )
-        
+
         # Least recently updated outputfile
         output_files = list((OUTPUT_DIR / mode).rglob("*.geojson"))
 
@@ -84,7 +86,6 @@ def main():
             gdf_isochrones[mode]["15"].append(gdf_15)
 
     for mode in MODES.keys():
-
         for tier in ISOCHRONE_TIERS:
             log.info(f"=========={mode} {tier} [{len(gdf_isochrones[mode][tier])}]==========")
 
@@ -92,8 +93,7 @@ def main():
                 continue  # Skip if no isochrones found to process for this mode and tier
 
             input_files = [
-                pathlib.Path(g["source_file"].values[0])
-                for g in gdf_isochrones[mode][tier]
+                pathlib.Path(g["source_file"].values[0]) for g in gdf_isochrones[mode][tier]
             ]
             # print(f"Files contributing to {mode} {tier}: {max_input_mtime=}")
             isochrone_concatenated_path = OUTPUT_DIR / mode / f"{tier}.geojson"
@@ -112,14 +112,12 @@ def main():
             gdf_isochrones_concatenated[mode][tier]["minutes"] = int(tier)
 
             # merge all overlapping geometries into a single geometries
-            gdf_isochrones_concatenated[mode][tier] = gdf_isochrones_concatenated[mode][tier].dissolve(
-                by=["type", "minutes"], as_index=False
-            )
+            gdf_isochrones_concatenated[mode][tier] = gdf_isochrones_concatenated[mode][
+                tier
+            ].dissolve(by=["type", "minutes"], as_index=False)
 
-            save_geodataframe(
-                gdf_isochrones_concatenated[mode][tier],
-                isochrone_concatenated_path
-            )
+            save_geodataframe(gdf_isochrones_concatenated[mode][tier], isochrone_concatenated_path)
+
 
 if __name__ == "__main__":
     logging.basicConfig(
@@ -127,36 +125,3 @@ if __name__ == "__main__":
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

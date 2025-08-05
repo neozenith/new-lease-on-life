@@ -9,19 +9,19 @@
 # ]
 # ///
 
-import pathlib
 import logging
+import pathlib
+from pathlib import Path
 
 import geopandas as gpd
-from pathlib import Path
 from utils import dirty
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
 
 log = logging.getLogger(__name__)
 
+
 def convert(geojson_file):
-    
     geoparquet_file = str(pathlib.Path(geojson_file).with_suffix(".parquet"))
 
     geojson_path = pathlib.Path(geojson_file)
@@ -36,7 +36,6 @@ def convert(geojson_file):
         gdf.to_parquet(geoparquet_file, engine="pyarrow", index=False)
     else:
         log.debug(f"{geoparquet_file} is up to date. Skipping conversion.")
-        
 
     log.info(f"""
         Converted {geojson_file} {geojson_path.stat().st_size / 1024 / 1024:.2f}Mb 

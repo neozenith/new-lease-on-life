@@ -17,15 +17,16 @@ standard "features" array in a FeatureCollection.
 
 Can process single files or recursively iterate through directories.
 """
-from tqdm import tqdm
+
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
-import logging
 
 import geopandas as gpd
 import pandas as pd
+from tqdm import tqdm
 from utils import (
     PTV_TRANSPORT_MODES,
     dirty,
@@ -39,7 +40,10 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 def fix_geojson(
-    stops: gpd.GeoDataFrame | pd.DataFrame, input_file: Path, output_file: Path | None = None, name=None
+    stops: gpd.GeoDataFrame | pd.DataFrame,
+    input_file: Path,
+    output_file: Path | None = None,
+    name=None,
 ):
     """
     Fix a non-standard GeoJSON file by converting it to a proper FeatureCollection.
@@ -98,15 +102,12 @@ def fix_geojson(
             """)
         _props["STOP_NAME"] = stop.STOP_NAME
     else:
-        log.warning(
-            f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. DELETING file"
-        )
+        log.warning(f"Warning: No stop found for STOP_ID {stop_id} in {input_file}. DELETING file")
         # Delete input_file
         input_file.unlink(missing_ok=True)
         return False
 
     try:
-
         data = json.loads(input_file.read_text(encoding="utf-8"))
         name = input_file.stem
 
@@ -167,7 +168,7 @@ def fix_geojson(
             # MapBox doesn't include metadata in the features, so we add it here
             feature_collection["info"] = {
                 "copyrights": ["MapBox IsoChrone API", "OpenStreetMap contributors"],
-                "collected": input_path.stat().st_mtime,
+                "collected": input_file.stat().st_mtime,
                 "source": "MapBox IsoChrone API",
             }
         else:
@@ -237,7 +238,9 @@ def validate_geojson(file_path):
         return False, f"Error validating GeoJSON: {e}"
 
 
-def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path, validate=False) -> tuple[int, int, int]:
+def process_directory(
+    stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path, validate=False
+) -> tuple[int, int, int]:
     """
     Process all GeoJSON files in a directory recursively.
 
@@ -263,7 +266,9 @@ def process_directory(stops: gpd.GeoDataFrame, input_dir: Path, output_dir: Path
     # Find all GeoJSON files in the directory and its subdirectories
     geojson_files = list(input_path.rglob("*.geojson"))
 
-    for geojson_file in tqdm(geojson_files, desc="Processing GeoJSON files", total=len(geojson_files)):
+    for geojson_file in tqdm(
+        geojson_files, desc="Processing GeoJSON files", total=len(geojson_files)
+    ):
         total_files += 1
 
         # Determine the relative path from the input directory
@@ -333,8 +338,10 @@ def main():
         total, successful, cached_files = process_directory(
             stops, Path(args.input), Path(args.output), args.validate
         )
-        log.info(f"Processed {successful+cached_files}/{total} files successfully. ({cached_files} files were cached).")
-        
+        log.info(
+            f"Processed {successful+cached_files}/{total} files successfully. ({cached_files} files were cached)."
+        )
+
         return 0 if successful + cached_files == total and total > 0 else 1
 
     # Process single file

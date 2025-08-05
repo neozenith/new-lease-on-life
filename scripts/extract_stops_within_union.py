@@ -9,8 +9,8 @@
 # ]
 # ///
 
-from pathlib import Path
 import logging
+from pathlib import Path
 
 import geopandas as gpd
 from utils import dirty, save_geodataframe
@@ -36,17 +36,17 @@ def extract_stops_within_union():
 
     # Load the unioned postcode polygon
     unioned_gdf = gpd.read_parquet(UNIONED_GEOJSON)
-    unioned_geom = unioned_gdf.union_all()
+    
 
     # Load the public transport stops
     stops_gdf = gpd.read_file(STOPS_GEOJSON)
-
     # Ensure CRS matches
     if stops_gdf.crs != unioned_gdf.crs:
         stops_gdf = stops_gdf.to_crs(unioned_gdf.crs)
 
     # Find stops within the unioned polygon
-    stops_within = stops_gdf  # [stops_gdf.within(unioned_geom)]
+    # stops_within = [stops_gdf.within(unioned_gdf.union_all())]
+    stops_within = stops_gdf
 
     if "MODE" in stops_within.columns:
         stops_within = stops_within[stops_within["MODE"] != "METRO BUS"]
