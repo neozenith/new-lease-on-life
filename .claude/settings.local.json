@@ -44,7 +44,8 @@
       "mcp__sequential-thinking__sequentialthinking",
       "Bash(jq:*)",
       "Bash(grep:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "WebFetch(domain:docs.anthropic.com)"
     ],
     "deny": []
   }
