@@ -18,7 +18,12 @@ I want all the data consolidated into one file in csv in tall format (not wide f
     - Look under `data/originals_converted/boundaries/SA2_2021_AUST_SHP_GDA2020/` for Suburb data
     - Look under `data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/` for Postcode data
     - Leverage `geopandas` (and `pyarrow`) to explore the geojson or geoparquet (extension `.parquet`) to cross check and validate the suburb and LGA from the excel.
-- `geometry` this should be the polygon geometry of the respective geospatial area.
+
+Once this CSV file is created create a GeoJSON file where every record gets their corresponding polygon.
+
+Ensure the output files are valid CSV and GeoJSON.
+
+Read the scripts/CLAUDE.md and create as many helper scripts as need be.
 
 ### Load Static Layers
 
