@@ -4,6 +4,8 @@
 
 ### Rental and Sales Data
 
+Read the scripts/CLAUDE.md and create as many helper scripts as need be.
+
 Create a new python script under `scripts/` that will extract the data out of `data/originals/rental/*.xslx` and `data/originals/sales/*.xslx` and save the results into their respective folder under `data/originals_converted/`.
 I want all the data consolidated into one file in csv in tall format (not wide format), where there is a column for:
 - `value` is a floating point value for the respective median value we are extracting
@@ -23,7 +25,7 @@ Once this CSV file is created create a GeoJSON file where every record gets thei
 
 Ensure the output files are valid CSV and GeoJSON.
 
-Read the scripts/CLAUDE.md and create as many helper scripts as need be.
+
 
 ### Load Static Layers
 
