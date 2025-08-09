@@ -4,7 +4,7 @@
 
 ### Rental and Sales Data
 
-Read the scripts/CLAUDE.md and create as many helper scripts as need be.
+Leverage as many create-helper-scripts subagents as need be.
 
 Create a new python script under `scripts/` that will extract the data out of `data/originals/rental/*.xslx` and `data/originals/sales/*.xslx` and save the results into their respective folders under `data/originals_converted/`.
 These excel files contain the median renta
