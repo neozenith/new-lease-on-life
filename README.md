@@ -142,11 +142,12 @@ flowchart TB
 This diagram shows how the various data files and processes are connected in the build system:
 
 1. **Auxiliary Data Processing** - Creating and processing postcode boundaries and public transport stops
-1. **Isochrone Processing** - Fetching, fixing, and consolidating the isochrones for visualization
-2. **Makefile Targets** - The actual make targets that coordinate the workflow
-3. **Final Outputs** - The isochrone viewer and processed rental properties data
+2. **Isochrone Processing** - Fetching, fixing, and consolidating the isochrones for visualization
+3. **Makefile Targets** - The actual make targets that coordinate the workflow
+4. **Final Outputs** - The isochrone viewer and processed rental properties data
 
-The diagram shows both the conceptual data flow (solid arrows) as well as the relationship between implementation and Makefile targets (dotted arrows). The color coding distinguishes between:
+   The diagram shows both the conceptual data flow (solid arrows) as well as the relationship between implementation and Makefile targets (dotted arrows). The color coding distinguishes between:
+
 - Data files (light blue)
 - Process nodes (light green)
 - Output nodes (light orange)

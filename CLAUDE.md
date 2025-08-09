@@ -8,6 +8,11 @@
 
 This project provides tools for geocoding addresses and calculating isochrones using the GraphHopper API. It processes public transport data, creates spatial visualizations, and provides an interactive web interface for exploring transportation accessibility.
 
+## Project Scripts
+
+@scripts/INDEX.md - Complete helper script documentation
+@scripts/TODO.md - Technical debt and improvements
+
 ## Current Architecture
 
 **Core Components**:
@@ -162,11 +167,8 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 
 ## Future Work & Technical Exploration
 
-
-
 **Other Technical Explorations**:
 - Integration with Victorian property data for enhanced analysis
 - Vector tile serving for efficient data delivery
 - Progressive web app capabilities for offline usage
 - Real-time isochrone calculation vs pre-computed results
-

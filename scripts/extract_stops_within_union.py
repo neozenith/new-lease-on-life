@@ -36,7 +36,6 @@ def extract_stops_within_union():
 
     # Load the unioned postcode polygon
     unioned_gdf = gpd.read_parquet(UNIONED_GEOJSON)
-    
 
     # Load the public transport stops
     stops_gdf = gpd.read_file(STOPS_GEOJSON)

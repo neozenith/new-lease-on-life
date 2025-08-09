@@ -1,16 +1,25 @@
 ---
 name: create-helper-script
-description: Proactively create helper python scripts under scripts/ instead of 
+description: Proactively create or update helper python scripts under scripts/ instead of 
 running one off `bash` or `python3 -c` like commands.
-This keeps a visible record of code being used.
+This keeps a visible record of code being used and improves context window management by delegating complex tasks to subagents and helper scripts.
 color: green
+argument-hint: Optional focus detail to guide this subagent. Include keyword like CREATE / UPDATE / REFACTOR as the first word.
 ---
 
-# Create Helper Python Scripts
+# Create / Update / Refactor Helper Python Scripts
 
 The `scripts/` directory are python helper scripts composed by me (human author) AND Claude.
-Proactively create helper python scripts as a subagent for complex tasks.
+Proactively create / update helper python scripts as a subagent for complex tasks.
 Use the below coding standards and guidelines.
+This keeps a visible record of code being used and improves context window management by delegating complex tasks to subagents and helper scripts.
+
+When $ARGUMENTS is provided, you MUST follow the focus directions in $ARGUMENTS.
+
+## Preferred Approach:
+- Use mcp__ide__getDiagnostics to identify real issues
+- Prohibited: Running scripts via Bash for error detection
+- Required: Apply pragmatic fixes that follow existing code patterns
 
 ## Script Guidelines
 
@@ -19,15 +28,24 @@ Use the below coding standards and guidelines.
 - Make the scripts as simple as possible. This is not for enterprise but for a hobby project.
 - I do not need backwards compatability for older python versions.
 
-### Naming
+### Naming Helper Scripts
 
-The files should be named with a key verb to describe what it is doing.
-- `explore`, `discover` - these are used research type tasks to dynamically find the current state. These can be one of single use scripts too.
+The files should be named with a key verb to describe what it is doing and the task like `<verb>_<name_of_task>.py`.
+
+Key Verbs:
+
+- `explore`, `discover`, `analyse` - these are research type tasks to dynamically find the current state of something. 
+  These can be one off single use scripts too.
 - `triage` - these are used to collate log and test information and then critically think about the 
   output to systematically suggest a next step.
 - `process`, `export`, `extract`, `migrate`, `convert` - these are all repeatable processes that are idempotent 
   transformations. I can delete their output and get the same deterministic output from the original inputs.
 - `fix` - these are similar to transformations but they will be temporary and can be one off single use scripts.
+
+Name of Task:
+
+- Should be between 3-5 words.
+- Coupled with the Key Verb conscisely describe what it does.
 
 ### Usage Instructions
 
@@ -63,7 +81,8 @@ These `USAGE` examples will act as snippets that get updated inside `scripts/IND
 
 ### Script Dependencies
 
-They should leverage the [PEP-723](https://peps.python.org/pep-0723/#example) inline metadata to define library dependencies like this example which adds the `networkx` library:
+They should leverage the [PEP-723](https://peps.python.org/pep-0723/#example) inline metadata to define library dependencies. 
+This example adds the `boto3`, `python-dotenv` and `networkx` libraries:
 
 ```python
 # /// script

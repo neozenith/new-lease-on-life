@@ -32,6 +32,7 @@ all: aux_data migrate_geojson_geoparquet rentals
 	uv run isochrone_viewer.py
 
 fix:
+	uvx rumdl check . --fix
 	uv run ruff format . --respect-gitignore
 	uv run ruff check --respect-gitignore --fix-only .
 	uv run ruff check --respect-gitignore --statistics .

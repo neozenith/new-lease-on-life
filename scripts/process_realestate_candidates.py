@@ -164,47 +164,6 @@ class RealEstateProcessor:
 
         return commute_results
 
-    async def process_candidate(
-        self, url: str, commute_destinations: list[dict[str, Any]]
-    ) -> dict[str, Any]:
-        """
-        Process a single real estate candidate URL.
-
-        Args:
-            url: The realestate.com.au URL
-            commute_destinations: List of commute destinations
-
-        Returns:
-            Dictionary with property details and commute times
-        """
-        log.info(f"Processing candidate: {url}")
-
-        # Extract property address
-        address = await self.extract_address_from_url(url)
-
-        if not address:
-            log.warning(f"Could not extract address for URL: {url}")
-            return {
-                "url": url,
-                "error": "Could not extract address",
-                "processed_at": datetime.now().isoformat(),
-            }
-
-        log.info(f"Extracted address: {address}")
-
-        # Calculate commute times
-        commute_times = self.calculate_commute_times(address, commute_destinations)
-
-        # Prepare result
-        result = {
-            "url": url,
-            "address": address,
-            "commute_times": commute_times,
-            "processed_at": datetime.now().isoformat(),
-        }
-
-        return result
-
     def save_result(self, result: dict[str, Any]) -> str:
         """
         Save processing result to JSON file.
@@ -307,6 +266,7 @@ class RealEstateProcessor:
                 and lon is not None
                 and dest_lat is not None
                 and dest_lon is not None
+                and self.gmaps
             ):
                 # Collect polylines for both driving and transit modes
                 for mode in ["driving", "transit"]:
@@ -398,7 +358,7 @@ async def main():
         log.warning("Google Maps API key not provided. Set GOOGLE_MAPS_API_KEY in .env file.")
 
     # Load candidates (now addresses directly)
-    candidate_addresses = load_yaml_file(CANDIDATES_YAML)
+    candidate_addresses = load_yaml_file(str(CANDIDATES_YAML))
     if not candidate_addresses or not isinstance(candidate_addresses, list):
         log.error(
             f"Invalid or missing candidates in {CANDIDATES_YAML}. Expected a list of addresses."
@@ -408,7 +368,7 @@ async def main():
     log.info(f"Loaded {len(candidate_addresses)} candidate addresses from {CANDIDATES_YAML}")
 
     # Load commute destinations
-    commute_destinations = load_yaml_file(COMMUTES_YAML)
+    commute_destinations = load_yaml_file(str(COMMUTES_YAML))
     if not commute_destinations or not isinstance(commute_destinations, list):
         log.error(
             f"Invalid or missing destinations in {COMMUTES_YAML}. Expected a list of destinations."
