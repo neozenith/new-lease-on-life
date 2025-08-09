@@ -9,6 +9,7 @@
 # ]
 # ///
 
+import argparse
 import logging
 from pathlib import Path
 
@@ -72,6 +73,11 @@ def extract_stops_within_union():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Filter transport stops within boundary unions (exclude buses)"
+    )
+    args = parser.parse_args()
+    
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",

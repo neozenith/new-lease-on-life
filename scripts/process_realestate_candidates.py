@@ -23,6 +23,7 @@ This script:
 # for each stop calculate the commute time to Southern cross station
 # and create a modified stops dataset to visualise the commute isochrones.
 
+import argparse
 import asyncio
 import json
 import logging
@@ -460,6 +461,13 @@ async def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Process real estate candidates from a YAML file. Reads a list of addresses from candidates.yml, "
+        "calculates commute times to destinations in known_commutes.yml using Google Maps API, "
+        "and saves all data to JSON files in data/candidate_real_estate/."
+    )
+    args = parser.parse_args()
+
     # Using asyncio.run (Python 3.12 as per script header)
     logging.basicConfig(
         level=logging.INFO,

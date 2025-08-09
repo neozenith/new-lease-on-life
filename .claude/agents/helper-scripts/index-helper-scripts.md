@@ -76,10 +76,24 @@ uv run scripts/{script}.py --data-dir /path --output-dir /path
 
 ## Script Analysis Instructions
 
-Extract from each script:
-- **Purpose** (1 line max)  
-- **Key usage flags** (not all options)
-- **Required environment variables** (if any)
-- **Primary output** (type and location)
+**ALL scripts should support `--help`**:
+1. **Use `uv run scripts/{script}.py --help`** to extract description and usage
+2. **Parse import statements** for environment variable requirements (dotenv, API keys)
+3. **Scan main() function** for output paths and file operations
 
-Maintain accuracy while maximizing token efficiency.
+Extract from each script:
+- **Purpose** (from --help description, 1 line max)  
+- **Key usage flags** (from --help, not all options)
+- **Required environment variables** (from .env imports/usage)
+- **Primary output** (from Path/write operations)
+
+**Efficiency Tips**:
+- Batch `--help` calls: `uv run scripts/script1.py --help; uv run scripts/script2.py --help`
+- Use `grep -l "MAPBOX\|GOOGLE\|GRAPHHOPPER" scripts/*.py` to find env requirements
+- Focus on --status, --dry-run, --limit, --validate flags (most common)
+
+**Recommended Workflow**:
+1. `ls scripts/*.py | head -20` - Get all script names
+2. Batch help extraction: `for script in scripts/*.py; do echo "=== $script ==="; uv run "$script" --help 2>/dev/null || echo "No help available"; done`
+3. `grep -l "load_dotenv\|API_KEY\|API_TOKEN" scripts/*.py` - Find env dependencies
+4. Quick scan output patterns: `grep -n "write_text\|to_file\|\.json\|\.geojson\|\.parquet" scripts/*.py`

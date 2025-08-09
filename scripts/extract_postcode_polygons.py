@@ -9,6 +9,7 @@
 # ]
 # ///
 
+import argparse
 import logging
 import pathlib
 from pathlib import Path
@@ -129,5 +130,10 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
+    parser = argparse.ArgumentParser(
+        description="Filter Australian postcode boundaries by transport stop presence"
+    )
+    args = parser.parse_args()
+    
     extract_postcode_polygons()
     log.info("Postcode polygons extracted and saved.")

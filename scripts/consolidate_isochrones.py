@@ -15,6 +15,7 @@
 # - Create a consolidated geodataframe of all isochrone polygons merged by personal transport mode and tier
 #  - Create a consolidated geodataframe of all isochrone polygons merged by public transport mode, personal transport mode and tier
 
+import argparse
 import logging
 import pathlib
 from pathlib import Path
@@ -124,4 +125,8 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
+    parser = argparse.ArgumentParser(
+        description="Merge cached isochrones by transport mode & time tier (5,10,15min)"
+    )
+    args = parser.parse_args()
     main()

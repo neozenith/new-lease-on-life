@@ -150,6 +150,7 @@ if __name__ == "__main__":
 - Always implement a minimal `ArgumentParser` that includes a definition of the script itself.
   This makes it easier for people and agentic coding tools to leverage the `--help` flag to index how to use it.
 - DO NOT replace capitalised config variables with CLI arguments or flags.
+- **"Minimal" means description only** - avoid adding arguments unless specifically required for the task.
 
 ```python
 import argparse

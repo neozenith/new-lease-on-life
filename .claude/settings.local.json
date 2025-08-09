@@ -47,7 +47,8 @@
       "Bash(mkdir:*)",
       "WebFetch(domain:docs.anthropic.com)",
       "mcp__ide__getDiagnostics",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [
       "Bash(python -m:*)",

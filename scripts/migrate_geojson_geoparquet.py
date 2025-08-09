@@ -9,6 +9,7 @@
 # ]
 # ///
 
+import argparse
 import logging
 import pathlib
 from pathlib import Path
@@ -49,6 +50,11 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
+    
+    parser = argparse.ArgumentParser(
+        description="Convert large GeoJSON files to compressed GeoParquet format"
+    )
+    args = parser.parse_args()
 
     convert("data/public_transport_lines.geojson")
     convert("data/public_transport_stops.geojson")
