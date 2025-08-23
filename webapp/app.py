@@ -26,12 +26,22 @@ import os
 
 import panel as pn
 import param
+from param.parameterized import Event
+import json
+from pathlib import Path
+import geopandas as gpd
+import pydeck as pdk
+from functools import cache
+
 
 pn.extension("deckgl", template="material", sizing_mode="stretch_width")
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+STATIC_LAYERS_CONFIG = SCRIPT_DIR / "static_layers_config.json"
 
 # Bounding box coordinates
 TOP_LEFT = (-37.713453, 144.895298)  # (lat, lon)
@@ -60,6 +70,8 @@ class App(pn.viewable.Viewer):
     max_time_bucket = 10
     time_bucket = param.Integer(default=0, bounds=(0, max_time_bucket), label="Time Bucket")
 
+    static_layer_config = {}
+
     def __init__(self, **params):
         super().__init__(**params)
         self.app = pn.pane.DeckGL(self.spec, sizing_mode="stretch_width", height=720)
@@ -70,11 +82,45 @@ class App(pn.viewable.Viewer):
             self._update_time_bucket, 1000 // self.speed, start=False
         )
 
+    @cache
+    def _load_static_layers(self) -> list[pdk.Layer]:
+        config = json.loads(STATIC_LAYERS_CONFIG.read_text())
+        output = []
+        for layer in config["static_layers"]:
+            if Path(layer["data"]).exists():
+                print(round(Path(layer["data"]).stat().st_size / 1024 / 1024, 2))
+
+            if layer["data"].endswith(".parquet"):
+                gdf = gpd.read_parquet(layer["data"])
+            elif layer["data"].endswith(".geojson"):
+                gdf = gpd.read_file(layer["data"])
+            else:
+                continue
+            
+            del layer["data"]
+            del layer["type"]
+
+            print(layer)
+            output.append(pdk.Layer(
+                "GeoJsonLayer",
+                data=gdf,
+                get_fill_color=layer.get("get_fill_color", [0, 0, 0, 0]),
+                get_line_color=layer.get("get_line_color", [255, 255, 255, 255]),
+                line_width_min_pixels=layer.get("line_width_min_pixels", 1),
+                pickable=(layer.get("pickable", False) == "True"),
+                auto_highlight=True,
+
+            ))
+        
+        return output
+
     @param.depends("view", watch=True)
-    def _update_layers(self):
+    def _update_layers(self, extra_argument: Event | None = None):
+        print(type(extra_argument))
+        print(extra_argument)
         # gdf = load_ptv_lines_data()  # Load the PTV lines data
         # layer = layer_for(gdf)  # Create a layer from the GeoDataFrame
-        layers = []
+        layers = self._load_static_layers()
         # self.app[1] = pn.pane.DeckGL(pdk.Deck(layers=layers), height=800)  # Update the DeckGL pane
 
     # @param.depends('view', 'radius', watch=True)
@@ -93,26 +139,30 @@ class App(pn.viewable.Viewer):
 
     @param.depends("view")
     def spec(self):
-        return {
-            "initialViewState": {
-                "bearing": 0,
-                "latitude": center_lat,
-                "longitude": center_lon,
-                "maxZoom": 15,
-                "minZoom": 5,
-                "pitch": 0,
-                "zoom": 11,
-            },
-            "mapProvider": "google_maps",  # Use Google Maps as the base map
-            "apiKeys": {
+        INITIAL_VIEW_STATE = pdk.ViewState(
+            bearing=0,
+            latitude=center_lat,
+            longitude=center_lon,
+            maxZoom=15,
+            minZoom=5,
+            pitch=0,
+            zoom=11,
+        )
+
+        deck_spec = pdk.Deck(
+            initial_view_state=INITIAL_VIEW_STATE,
+            layers= self._load_static_layers(),
+            map_provider="google_maps",  # Use Google Maps as the base map
+            map_style=map_style,
+            views=[{"@@type": "MapView", "controller": True}],
+            api_keys={
                 "google_maps": os.environ.get(
                     "GOOGLE_MAPS_API_KEY", ""
                 ),  # Replace with your Google Maps API key
             },
-            "mapStyle": map_style,
-            "layers": [],
-            "views": [{"@@type": "MapView", "controller": True}],
-        }
+        )
+        return deck_spec
+        
 
     def _update_time_bucket(self):
         self.time_bucket = (self.time_bucket + 1) % self.max_time_bucket

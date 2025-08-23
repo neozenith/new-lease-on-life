@@ -1,12 +1,4 @@
 #!/usr/bin/env python
-"""
-isochrone_viewer.py - Minimal Holoviz Panel app with DeckGL map.
-
-Shows a map centered and zoomed to the bounding box:
-  Top-left:   -37.713453, 144.895298
-  Bottom-right: -37.814206, 144.989262
-"""
-
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
@@ -14,10 +6,6 @@ Shows a map centered and zoomed to the bounding box:
 #   "pydeck",
 #   "geopandas",
 #   "pyarrow",
-#   "duckdb",
-#   "duckdb-extensions",
-#   "duckdb-extension-spatial",
-#   "python-dotenv>=1.0.0",
 #   "shapely",
 # ]
 # ///
@@ -92,7 +80,40 @@ SELECTED_POSTCODES = "data/geojson/ptv/boundaries/selected_postcodes.parquet"
 
 
 mesh_key = "POA_CODE21"
+# SA1 = "data/originals_converted/boundaries/SA1_2021_AUST_SHP_GDA2020/SA1_2021_AUST_GDA2020.geojson"
+# sa1_gdf = gpd.read_file(SA1)
+# sa1_layer = pdk.Layer(
+#     "GeoJsonLayer",
+#     data=sa1_gdf,
+#     get_fill_color="color",  # Semi-transparent
+#     get_line_color=[255, 0, 0, 255],  # White lines
+#     line_width_min_pixels=2,
+#     pickable=True,
+#     auto_highlight=True,
+# )
+POA = "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.geojson"
+poa_gdf = gpd.read_file(POA)
+poa_layer = pdk.Layer(
+    "GeoJsonLayer",
+    data=poa_gdf,
+    get_fill_color=[0,0,0,0],
+    get_line_color=[255, 0, 0, 255], 
+    line_width_min_pixels=2,
+    pickable=True,
+    auto_highlight=True,
+)
 
+RA1 = "data/originals_converted/boundaries/RA_2021_AUST_GDA2020/RA_2021_AUST_GDA2020.geojson"
+ra1_gdf = gpd.read_file(RA1)
+ra1_layer = pdk.Layer(
+    "GeoJsonLayer",
+    data=ra1_gdf,
+    get_fill_color=[0,0,0,0],
+    get_line_color=[0, 0, 255, 255],
+    line_width_min_pixels=2,
+    pickable=False,
+    auto_highlight=True,
+)
 
 TRAM_POSTCODE_BOUNDARIES = "data/geojson/ptv/boundaries/unioned_postcodes_with_trams.parquet"
 TRAINTRAM_POSTCODE_BOUNDARIES = (
@@ -191,7 +212,7 @@ postcode_boundary_layer = pdk.Layer(
     "GeoJsonLayer",
     data=gdf_postcodes,
     get_fill_color="color",  # Semi-transparent
-    get_line_color=[255, 255, 255, 255],  # White lines
+    get_line_color=[0, 255, 0, 255],  # White lines
     line_width_min_pixels=2,
     pickable=True,
     auto_highlight=True,
@@ -475,7 +496,10 @@ for mode in MODES.keys():
             )
             visible_isochrone_layers.append(isochrone_layers[mode][tier])
 
-# LAYERS.append(postcode_boundary_layer)
+# LAYERS.append(sa1_layer)
+LAYERS.append(poa_layer)
+LAYERS.append(ra1_layer)
+
 
 # LAYERS.append(traintram_outer_boundary_layer)
 
@@ -483,13 +507,13 @@ for mode in MODES.keys():
 
 # LAYERS.append(tram_outer_boundary_layer)
 
-LAYERS.extend(visible_isochrone_layers)
+# LAYERS.extend(visible_isochrone_layers)
 
 # # Add the PTV lines layer to show transit routes
 LAYERS.append(ptv_lines_layer)
 
 # Add the commute time hull polygons first (will be below stops)
-LAYERS.append(ptv_commute_hulls_layer)
+# LAYERS.append(ptv_commute_hulls_layer)
 
 # Add the stops on top for better visibility
 LAYERS.append(ptv_stops_layer)
