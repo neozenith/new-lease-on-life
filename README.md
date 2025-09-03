@@ -154,3 +154,9 @@ This diagram shows how the various data files and processes are connected in the
 - Makefile targets (light red)
 
 Running `make all` will execute the entire workflow from beginning to end, while individual targets can be run separately as needed.
+
+# RESEARCH
+
+- https://foursquare.com/
+- https://sqlrooms.org/
+- 

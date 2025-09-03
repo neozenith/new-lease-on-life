@@ -1,0 +1,34 @@
+{
+    "static_layers": [
+        {
+            "name": "Postcodes",
+            "type": "GeoJsonLayer",
+            "data": "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.parquet",
+            "get_fill_color": [0, 0, 0, 0],
+            "get_line_color": [255, 0, 0, 255],
+            "line_width_min_pixels": 2,
+            "pickable": "True"
+        },
+        {
+            "name": "LGA",
+            "type": "GeoJsonLayer",
+            "data": "data/originals_converted/boundaries/LGA_2024_AUST_GDA2020/LGA_2024_AUST_GDA2020.parquet",
+            "get_fill_color": [0, 0, 0, 0],
+            "get_line_color": [0, 255, 0, 255],
+            "line_width_min_pixels": 2,
+            "pickable": "False"
+        },
+        {
+            "name": "RemoteAreas",
+            "type": "GeoJsonLayer",
+            "data": "data/originals_converted/boundaries/RA_2021_AUST_GDA2020/RA_2021_AUST_GDA2020.parquet",
+            "get_fill_color": [0, 0, 0, 0],
+            "get_line_color": [0, 0, 255, 255],
+            "line_width_min_pixels": 2,
+            "pickable": "False"
+
+        }
+        
+    ]
+
+}

@@ -1,6 +1,6 @@
 # Helper Script Index
 
-**Quick Reference**: 10 scripts - Data Pipeline + Geospatial Analysis | Pipeline: Raw Data → Boundaries → Stops → Isochrones → Analysis
+**Quick Reference**: 12 scripts - Data Pipeline + Geospatial Analysis | Pipeline: Raw Data → Boundaries → Stops → Isochrones → Analysis
 
 ## Script Matrix
 
@@ -8,7 +8,7 @@
 |----------|---------|-------------|
 | **Data Pipeline** | batch_isochrones, consolidate_isochrones, fix_geojson | API fetching, data consolidation, format standardization |
 | **Geospatial** | export_shapefiles, migrate_geojson_geoparquet | Format conversion, compression optimization |
-| **Boundaries** | extract_postcode_polygons, extract_stops_within_union | Spatial filtering, boundary processing |
+| **Boundaries** | extract_postcode_polygons, extract_state_polygons, extract_boundaries_victoria, extract_stops_within_union | Spatial filtering, boundary processing, state union |
 | **Analysis** | stops_by_transit_time, process_realestate_candidates | Commute calculation, property analysis |
 | **Utils** | utils | Shared functions, API retry, normalization |
 
@@ -44,6 +44,16 @@
 **Purpose**: Filter Australian postcode boundaries by transport stop presence
 **Usage**: `uv run scripts/extract_postcode_polygons.py`
 **Output**: data/geojson/ptv/boundaries/{selected|unioned}_postcodes_*.geojson
+
+### extract_state_polygons.py
+**Purpose**: Extract and union state/territory polygons from SA4 boundary data
+**Usage**: `uv run scripts/extract_state_polygons.py`
+**Output**: data/originals_converted/state_polygons/australian_states.{geojson|parquet}
+
+### extract_boundaries_victoria.py
+**Purpose**: Filter Australian boundary data to only include Victoria state features
+**Usage**: `uv run scripts/extract_boundaries_victoria.py [--dry-run] [--limit N] [--verbose]`
+**Output**: data/originals_converted/boundaries_victoria/**/*.parquet (preserves structure)
 
 ### extract_stops_within_union.py
 **Purpose**: Filter transport stops within boundary unions (exclude buses)
@@ -94,4 +104,4 @@ Raw Data → Boundaries → Stops → Isochrones → Analysis
 8. **process_realestate_candidates** → Property analysis
 
 ---
-**Scripts**: 10 | **Python**: 3.12+ | **Manager**: uv
+**Scripts**: 12 | **Python**: 3.12+ | **Manager**: uv

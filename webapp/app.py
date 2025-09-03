@@ -23,6 +23,7 @@ Shows a map centered and zoomed to the bounding box:
 # ///
 
 import os
+import time
 
 import panel as pn
 import param
@@ -32,6 +33,10 @@ from pathlib import Path
 import geopandas as gpd
 import pydeck as pdk
 from functools import cache
+
+import logging
+
+log = logging.getLogger(__name__)
 
 
 pn.extension("deckgl", template="material", sizing_mode="stretch_width")
@@ -75,7 +80,7 @@ class App(pn.viewable.Viewer):
     def __init__(self, **params):
         super().__init__(**params)
         self.app = pn.pane.DeckGL(self.spec, sizing_mode="stretch_width", height=720)
-        self._update_layers()
+        self._update_layers(panel_event=None)
         self.app.param.watch(self._update_layers, "click_state")
         self._playing = False
         self._cb = pn.state.add_periodic_callback(
@@ -90,17 +95,20 @@ class App(pn.viewable.Viewer):
             if Path(layer["data"]).exists():
                 print(round(Path(layer["data"]).stat().st_size / 1024 / 1024, 2))
 
+            start_load_time = time.perf_counter()
             if layer["data"].endswith(".parquet"):
                 gdf = gpd.read_parquet(layer["data"])
             elif layer["data"].endswith(".geojson"):
                 gdf = gpd.read_file(layer["data"])
             else:
                 continue
-            
+            end_load_time = time.perf_counter()
+            log.info(f"Loaded {layer['name']} in {end_load_time - start_load_time:.2f} seconds")
+
             del layer["data"]
             del layer["type"]
 
-            print(layer)
+            log.info(layer)
             output.append(pdk.Layer(
                 "GeoJsonLayer",
                 data=gdf,
@@ -115,13 +123,13 @@ class App(pn.viewable.Viewer):
         return output
 
     @param.depends("view", watch=True)
-    def _update_layers(self, extra_argument: Event | None = None):
-        print(type(extra_argument))
-        print(extra_argument)
+    def _update_layers(self, panel_event: Event | None = None):
+        log.info(f"_update_layers:: {panel_event=}")
         # gdf = load_ptv_lines_data()  # Load the PTV lines data
         # layer = layer_for(gdf)  # Create a layer from the GeoDataFrame
         layers = self._load_static_layers()
-        # self.app[1] = pn.pane.DeckGL(pdk.Deck(layers=layers), height=800)  # Update the DeckGL pane
+        # self.app = pn.pane.DeckGL(pdk.Deck(layers=layers), height=800)  # Update the DeckGL pane
+        
 
     # @param.depends('view', 'radius', watch=True)
     # def _update_arc_view(self, event=None):

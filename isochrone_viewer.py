@@ -7,6 +7,7 @@
 #   "geopandas",
 #   "pyarrow",
 #   "shapely",
+#   "python-dotenv",
 # ]
 # ///
 import logging

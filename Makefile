@@ -1,11 +1,27 @@
-.PHONY: fix_geojson scrape_isochrones all consolidate_isochrones migrate_geojson_geoparquet rentals aux_data isochrones
+.PHONY: fix_geojson scrape_isochrones all consolidate_isochrones migrate_geojson_geoparquet rentals \
+		aux_data isochrones state_polygons polygons_by_state fix convert_shp_files \
+		postcode_polygons_subset ptv_stops_subset commuting_hulls
 
 ######### SUPPORT FILES #########
-aux_data:
-#	uv run scripts/export_shapefiles.py
+convert_shp_files:
+	uv run scripts/export_shapefiles.py
+
+postcode_polygons_subset: convert_shp_files	
 	time uv run scripts/extract_postcode_polygons.py
+
+ptv_stops_subset: postcode_polygons_subset
 	time uv run scripts/extract_stops_within_union.py
+
+commuting_hulls: ptv_stops_subset
 	time uv run scripts/stops_by_transit_time.py
+
+state_polygons: convert_shp_files
+	uv run scripts/extract_state_polygons.py
+
+polygons_by_state: state_polygons convert_shp_files
+	uv run scripts/extract_boundaries_by_state.py --state 'Victoria'
+	
+aux_data: polygons_by_state commuting_hulls ptv_stops_subset postcode_polygons_subset
 
 ######### API FETCHING #########
 scrape_isochrones:
