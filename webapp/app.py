@@ -22,19 +22,18 @@ Shows a map centered and zoomed to the bounding box:
 # ]
 # ///
 
+import json
+import logging
 import os
 import time
+from functools import cache
+from pathlib import Path
 
+import geopandas as gpd
 import panel as pn
 import param
-from param.parameterized import Event
-import json
-from pathlib import Path
-import geopandas as gpd
 import pydeck as pdk
-from functools import cache
-
-import logging
+from param.parameterized import Event
 
 log = logging.getLogger(__name__)
 
@@ -109,17 +108,18 @@ class App(pn.viewable.Viewer):
             del layer["type"]
 
             log.info(layer)
-            output.append(pdk.Layer(
-                "GeoJsonLayer",
-                data=gdf,
-                get_fill_color=layer.get("get_fill_color", [0, 0, 0, 0]),
-                get_line_color=layer.get("get_line_color", [255, 255, 255, 255]),
-                line_width_min_pixels=layer.get("line_width_min_pixels", 1),
-                pickable=(layer.get("pickable", False) == "True"),
-                auto_highlight=True,
+            output.append(
+                pdk.Layer(
+                    "GeoJsonLayer",
+                    data=gdf,
+                    get_fill_color=layer.get("get_fill_color", [0, 0, 0, 0]),
+                    get_line_color=layer.get("get_line_color", [255, 255, 255, 255]),
+                    line_width_min_pixels=layer.get("line_width_min_pixels", 1),
+                    pickable=(layer.get("pickable", False) == "True"),
+                    auto_highlight=True,
+                )
+            )
 
-            ))
-        
         return output
 
     @param.depends("view", watch=True)
@@ -129,7 +129,6 @@ class App(pn.viewable.Viewer):
         # layer = layer_for(gdf)  # Create a layer from the GeoDataFrame
         layers = self._load_static_layers()
         # self.app = pn.pane.DeckGL(pdk.Deck(layers=layers), height=800)  # Update the DeckGL pane
-        
 
     # @param.depends('view', 'radius', watch=True)
     # def _update_arc_view(self, event=None):
@@ -159,7 +158,7 @@ class App(pn.viewable.Viewer):
 
         deck_spec = pdk.Deck(
             initial_view_state=INITIAL_VIEW_STATE,
-            layers= self._load_static_layers(),
+            layers=self._load_static_layers(),
             map_provider="google_maps",  # Use Google Maps as the base map
             map_style=map_style,
             views=[{"@@type": "MapView", "controller": True}],
@@ -170,7 +169,6 @@ class App(pn.viewable.Viewer):
             },
         )
         return deck_spec
-        
 
     def _update_time_bucket(self):
         self.time_bucket = (self.time_bucket + 1) % self.max_time_bucket

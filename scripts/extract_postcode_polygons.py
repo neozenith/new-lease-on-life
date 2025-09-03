@@ -134,6 +134,6 @@ if __name__ == "__main__":
         description="Filter Australian postcode boundaries by transport stop presence"
     )
     args = parser.parse_args()
-    
+
     extract_postcode_polygons()
     log.info("Postcode polygons extracted and saved.")

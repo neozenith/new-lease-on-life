@@ -1,6 +1,6 @@
-import panel as pn
 import logging
 
+import panel as pn
 
 log = logging.getLogger(__name__)
 

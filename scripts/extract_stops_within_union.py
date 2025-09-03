@@ -77,7 +77,7 @@ if __name__ == "__main__":
         description="Filter transport stops within boundary unions (exclude buses)"
     )
     args = parser.parse_args()
-    
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",

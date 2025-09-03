@@ -155,8 +155,8 @@ This diagram shows how the various data files and processes are connected in the
 
 Running `make all` will execute the entire workflow from beginning to end, while individual targets can be run separately as needed.
 
-# RESEARCH
+## RESEARCH
 
 - https://foursquare.com/
 - https://sqlrooms.org/
-- 
+-

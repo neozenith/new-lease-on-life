@@ -50,7 +50,7 @@ if __name__ == "__main__":
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
     )
-    
+
     parser = argparse.ArgumentParser(
         description="Convert large GeoJSON files to compressed GeoParquet format"
     )

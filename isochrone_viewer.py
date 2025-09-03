@@ -97,8 +97,8 @@ poa_gdf = gpd.read_file(POA)
 poa_layer = pdk.Layer(
     "GeoJsonLayer",
     data=poa_gdf,
-    get_fill_color=[0,0,0,0],
-    get_line_color=[255, 0, 0, 255], 
+    get_fill_color=[0, 0, 0, 0],
+    get_line_color=[255, 0, 0, 255],
     line_width_min_pixels=2,
     pickable=True,
     auto_highlight=True,
@@ -109,7 +109,7 @@ ra1_gdf = gpd.read_file(RA1)
 ra1_layer = pdk.Layer(
     "GeoJsonLayer",
     data=ra1_gdf,
-    get_fill_color=[0,0,0,0],
+    get_fill_color=[0, 0, 0, 0],
     get_line_color=[0, 0, 255, 255],
     line_width_min_pixels=2,
     pickable=False,

@@ -297,7 +297,7 @@ if __name__ == "__main__":
         description="Calculate transit time (minutes) and distance (km) from public transport stops to Southern Cross Station, and save the results as a GeoJSON file."
     )
     args = parser.parse_args()
-    
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s|%(name)s|%(levelname)s|%(filename)s:%(lineno)d - %(message)s",
