@@ -1,0 +1,11 @@
+{
+"type": "FeatureCollection",
+"name": "all_candidates",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "address": "1/618-620 Sydney Road, Coburg, Vic 3058", "processed_at": "2025-09-17T15:33:18.045", "ptv_walkability_colour": "#A67C00", "ptv_walkable_5min": true, "ptv_walkable_15min": true, "feature_type": "property" }, "geometry": { "type": "Point", "coordinates": [ 144.966455599999989, -37.7360538 ] } },
+{ "type": "Feature", "properties": { "address": "2B Tassell Street, Hadfield, Vic 3046", "processed_at": "2025-09-17T15:33:20.488", "ptv_walkability_colour": "#800000", "ptv_walkable_5min": false, "ptv_walkable_15min": false, "feature_type": "property" }, "geometry": { "type": "Point", "coordinates": [ 144.9384253, -37.7136421 ] } },
+{ "type": "Feature", "properties": { "address": "2A Kalang Rd, Glenroy, Vic 3046", "processed_at": "2025-09-17T15:33:22.960", "ptv_walkability_colour": "#00C864", "ptv_walkable_5min": false, "ptv_walkable_15min": true, "feature_type": "property" }, "geometry": { "type": "Point", "coordinates": [ 144.9220608, -37.7100322 ] } },
+{ "type": "Feature", "properties": { "address": "53 Waterford Avenue, Maribyrnong, Vic 3032", "processed_at": "2025-09-17T15:33:25.629", "ptv_walkability_colour": "#A67C00", "ptv_walkable_5min": true, "ptv_walkable_15min": true, "feature_type": "property" }, "geometry": { "type": "Point", "coordinates": [ 144.8795149, -37.7724746 ] } }
+]
+}

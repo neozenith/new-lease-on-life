@@ -16,7 +16,10 @@ This script:
 #   "googlemaps>=4.10.0",
 #   "python-dotenv>=1.0.0",
 #   "geopandas",
+#   "pyarrow",
 #   "polyline",
+#   "requests",
+#   "tqdm>=4.66.1",
 # ]
 # ///
 
@@ -34,12 +37,15 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import geopandas as gpd
 import googlemaps
 import polyline
 import yaml
 from dotenv import load_dotenv
 from shapely.geometry import LineString, Point
+
+from utils import save_geodataframe
 
 # Load environment variables from .env file
 load_dotenv()
@@ -57,9 +63,39 @@ CANDIDATES_YAML = SCRIPT_DIR.parent / "candidates.yml"
 COMMUTES_YAML = SCRIPT_DIR.parent / "known_commutes.yml"
 OUTPUT_DIR = SCRIPT_DIR.parent / "data/candidate_real_estate"
 
+INPUT_ISOCHRONE_FOOT_5MIN = SCRIPT_DIR.parent / "data/isochrones_concatenated/foot/5.geojson"
+INPUT_ISOCHRONE_FOOT_15MIN = SCRIPT_DIR.parent / "data/isochrones_concatenated/foot/15.geojson"
+
 # Ensure output directory exists
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+def check_ptv_walkability(lat: float | None, lon: float | None) -> tuple[bool, bool]:
+    """Check if a point is within 5 or 15 minutes walkable isochrone."""
+    if lat is None or lon is None:
+        return False, False
+
+    point = Point(lon, lat)  # Note: Point takes (lon, lat)
+
+    try:
+        foot_5min_gdf = gpd.read_file(INPUT_ISOCHRONE_FOOT_5MIN)
+        foot_15min_gdf = gpd.read_file(INPUT_ISOCHRONE_FOOT_15MIN)
+    except Exception as e:
+        log.error(f"Error loading isochrone files: {e}")
+        return False, False
+
+    inside_5_min = any(foot_5min_gdf.contains(point))
+    inside_15_min = any(foot_15min_gdf.contains(point))
+
+    return inside_5_min, inside_15_min
+
+def get_walkability_colour(inside_5_min: bool, inside_15_min: bool) -> str:
+    """Determine walkability colour based on isochrone inclusion."""
+    if inside_5_min:
+        return "#A67C00"  # Dark Mustard --> A little too close to walk (usually hypoer dense area)
+    elif inside_15_min:
+        return "#00C864"  # Green --> Between 5-15min walk is the sweet spot
+    else:
+        return "#800000"  # Maroon --> Too far to walk
 
 class RealEstateProcessor:
     """Process real estate addresses and calculate commute times."""
@@ -73,120 +109,6 @@ class RealEstateProcessor:
                 "Google Maps API key not provided. Commute time calculations will be skipped."
             )
 
-    def calculate_commute_times(
-        self, origin: str, destinations: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """
-        Calculate commute times from origin to multiple destinations using Google Maps API.
-
-        Args:
-            origin: Origin address
-            destinations: List of destination dictionaries with name and address
-        Returns:
-            List of commute results with travel times for different modes
-        """
-        if not self.gmaps:
-            log.warning("Google Maps client not initialized. Skipping commute calculations.")
-            return []
-
-        commute_results = []
-
-        for destination in destinations:
-            dest_name = destination.get("name", "Unknown")
-            dest_address = destination.get("address", "")
-
-            if not dest_address:
-                log.warning(f"No address found for destination {dest_name}. Skipping.")
-                continue
-
-            log.info(f"Calculating commute from {origin} to {dest_name} ({dest_address})")
-
-            commute_data = {
-                "destination_name": dest_name,
-                "destination_address": dest_address,
-                "modes": {},
-            }
-
-            # Calculate for different transport modes
-            for mode in ["driving", "transit", "walking", "bicycling"]:
-                try:
-                    # Calculate for both morning (8 AM) and evening (5 PM) peak times
-                    morning_departure = datetime.now().replace(
-                        hour=8, minute=0, second=0
-                    ) + timedelta(days=1)  # Next day morning
-                    evening_departure = datetime.now().replace(
-                        hour=17, minute=0, second=0
-                    ) + timedelta(days=1)  # Next day evening
-
-                    directions_morning = self.gmaps.directions(
-                        origin, dest_address, mode=mode, departure_time=morning_departure
-                    )
-
-                    directions_evening = self.gmaps.directions(
-                        dest_address, origin, mode=mode, departure_time=evening_departure
-                    )
-
-                    # Extract duration from the response
-                    morning_duration = (
-                        directions_morning[0]["legs"][0]["duration"]["value"]
-                        if directions_morning
-                        else None
-                    )
-                    evening_duration = (
-                        directions_evening[0]["legs"][0]["duration"]["value"]
-                        if directions_evening
-                        else None
-                    )
-
-                    commute_data["modes"][mode] = {
-                        "to_work_seconds": morning_duration,
-                        "to_work_text": directions_morning[0]["legs"][0]["duration"]["text"]
-                        if directions_morning
-                        else None,
-                        "from_work_seconds": evening_duration,
-                        "from_work_text": directions_evening[0]["legs"][0]["duration"]["text"]
-                        if directions_evening
-                        else None,
-                        "daily_commute_seconds": (morning_duration or 0) + (evening_duration or 0),
-                        "weekly_commute_seconds": (
-                            (morning_duration or 0) + (evening_duration or 0)
-                        )
-                        * 5,  # Assuming 5 workdays
-                    }
-
-                    # Add a small delay to avoid hitting rate limits
-                    time.sleep(0.2)
-
-                except Exception as e:
-                    log.error(f"Error calculating {mode} commute: {e}")
-                    commute_data["modes"][mode] = {"error": str(e)}
-
-            commute_results.append(commute_data)
-
-        return commute_results
-
-    def save_result(self, result: dict[str, Any]) -> str:
-        """
-        Save processing result to JSON file.
-
-        Args:
-            result: Processing result dictionary
-
-        Returns:
-            Path to the saved file
-        """
-        if result.get("error"):
-            log.error(f"Error processing result: {result['error']}")
-            return ""
-
-        # Generate a filepath based on the URL
-        filepath = self.output_file_for_url(result["url"])
-
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
-
-        log.info(f"Saved result to {filepath}")
-        return str(filepath)
 
     def output_file_for_url(self, url: str) -> Path:
         """
@@ -199,7 +121,7 @@ class RealEstateProcessor:
             A valid filename string
         """
         url_parts = url.replace("https://", "").replace("http://", "").split("/")
-        filename = f"{'_'.join(url_parts[1:]).replace('.', '_')}.json"
+        filename = f"{'_'.join(url_parts).replace('.', '_')}.json"
 
         # Ensure filename is valid
         filename = "".join(c if c.isalnum() or c in ["_", "."] else "_" for c in filename)
@@ -220,7 +142,7 @@ class RealEstateProcessor:
             log.error(f"Error geocoding address {address}: {e}")
         return None, None
 
-    def save_geojson_result(self, result: dict[str, Any]) -> str:
+    def save_geojson_result(self, result: dict[str, Any]) -> gpd.GeoDataFrame:
         """
         Save processing result to a GeoJSON file with Point and LineString features using geopandas.
         Only saves if at least one geometry is present.
@@ -244,92 +166,21 @@ class RealEstateProcessor:
             lat, lon = self.geocode_address(result["address"])
             result["lat"] = lat
             result["lon"] = lon
+
+        inside_5_min, inside_15_min = check_ptv_walkability(lat, lon)
+        walkability_colour = get_walkability_colour(inside_5_min, inside_15_min)
+        result["ptv_walkability_colour"] = walkability_colour
+        result["ptv_walkable_5min"] = inside_5_min
+        result["ptv_walkable_15min"] = inside_15_min
         if lat is not None and lon is not None:
             records.append(
                 {
-                    **{k: v for k, v in result.items() if k not in ["lat", "lon", "commute_times"]},
+                    **{k: v for k, v in result.items() if k not in ["lat", "lon"]},
                     "geometry": Point(lon, lat),
                     "feature_type": "property",
                 }
             )
 
-        # Add commute LineString features if possible, using Google Maps API polyline
-        for commute in result.get("commute_times", []):
-            dest_lat = commute.get("destination_lat") or commute.get("lat")
-            dest_lon = commute.get("destination_lon") or commute.get("lon")
-            dest_address = commute.get("destination_address")
-            # Geocode destination if needed
-            if (dest_lat is None or dest_lon is None) and dest_address and self.gmaps:
-                dest_lat, dest_lon = self.geocode_address(dest_address)
-            # Use Google Maps Directions API to get polylines for different modes
-            if (
-                lat is not None
-                and lon is not None
-                and dest_lat is not None
-                and dest_lon is not None
-                and self.gmaps
-            ):
-                # Collect polylines for both driving and transit modes
-                for mode in ["driving", "transit"]:
-                    try:
-                        directions = self.gmaps.directions(
-                            (lat, lon), (dest_lat, dest_lon), mode=mode
-                        )
-
-                        if directions and "overview_polyline" in directions[0]:
-                            poly = directions[0]["overview_polyline"]["points"]
-                            coords = polyline.decode(poly)
-                            line = LineString([(lng, lat) for lat, lng in coords])
-                            records.append(
-                                {
-                                    **{
-                                        k: v
-                                        for k, v in commute.items()
-                                        if k
-                                        not in ["lat", "lon", "destination_lat", "destination_lon"]
-                                    },
-                                    "geometry": line,
-                                    "feature_type": f"commute_{mode}",
-                                    "travel_mode": mode,
-                                    "distance": directions[0]["legs"][0]["distance"]["text"]
-                                    if directions[0]["legs"]
-                                    else None,
-                                    "duration": directions[0]["legs"][0]["duration"]["text"]
-                                    if directions[0]["legs"]
-                                    else None,
-                                }
-                            )
-
-                            # Add each step polyline for more detailed route visualization
-                            if directions[0]["legs"]:
-                                for i, step in enumerate(directions[0]["legs"][0].get("steps", [])):
-                                    if "polyline" in step and "points" in step["polyline"]:
-                                        step_coords = polyline.decode(step["polyline"]["points"])
-                                        step_line = LineString(
-                                            [(lng, lat) for lat, lng in step_coords]
-                                        )
-                                        records.append(
-                                            {
-                                                "geometry": step_line,
-                                                "feature_type": f"commute_step_{mode}",
-                                                "step_index": i,
-                                                "travel_mode": mode,
-                                                "step_mode": step.get("travel_mode", mode),
-                                                "html_instructions": step.get(
-                                                    "html_instructions", ""
-                                                ),
-                                                "distance": step["distance"]["text"]
-                                                if "distance" in step
-                                                else "",
-                                                "duration": step["duration"]["text"]
-                                                if "duration" in step
-                                                else "",
-                                            }
-                                        )
-                    except Exception as e:
-                        log.error(
-                            f"Error getting {mode} polyline for {result['address']} to {dest_address}: {e}"
-                        )
 
         # Only save if there is at least one geometry
         records = [r for r in records if r["geometry"] is not None]
@@ -339,7 +190,7 @@ class RealEstateProcessor:
         gdf = gpd.GeoDataFrame(records, crs="EPSG:4326")
         gdf.to_file(filepath, driver="GeoJSON")
         log.info(f"Saved GeoJSON result to {filepath}")
-        return str(filepath)
+        return gdf
 
 
 def load_yaml_file(filepath: str) -> Any:
@@ -397,6 +248,7 @@ async def main():
 
     # Process each candidate
     results = []
+    all_gdfs = []
     for address in candidate_addresses:
         try:
             file_path = processor.output_file_for_url(address).with_suffix(".geojson")
@@ -406,34 +258,23 @@ async def main():
                 and file_path.stat().st_mtime > Path(CANDIDATES_YAML).stat().st_mtime
             ):
                 log.info(f"SKIP {address}, already processed: {file_path}")
+                gdf = gpd.read_file(file_path)
+                all_gdfs.append(gdf)
                 continue
 
             log.info(f"Processing: {address}")
 
-            # Calculate commute times for this address
-            commute_times = processor.calculate_commute_times(address, formatted_destinations)
-
-            # Try to get lat/lon for the address if available in formatted_destinations
-            lat = None
-            lon = None
-            for dest in formatted_destinations:
-                if dest["address"] == address and dest.get("lat") and dest.get("lon"):
-                    lat = dest["lat"]
-                    lon = dest["lon"]
-                    break
-
             # Prepare result
             result = {
                 "address": address,
-                "lat": lat,
-                "lon": lon,
-                "commute_times": commute_times,
+                "lat": None,
+                "lon": None,
                 "processed_at": datetime.now().isoformat(),
             }
 
             # Save the result as GeoJSON
-            processor.save_geojson_result(result)
-
+            gdf = processor.save_geojson_result(result)
+            all_gdfs.append(gdf)
             results.append(result)
 
             # Add a small delay between API requests
@@ -443,6 +284,10 @@ async def main():
 
         except Exception as e:
             log.error(f"Error processing candidate address {address}: {e}")
+
+    # Combine all GeoDataFrames and save a summary file
+    combined_gdf = gpd.GeoDataFrame(pd.concat(all_gdfs, ignore_index=True), crs="EPSG:4326")
+    save_geodataframe(combined_gdf, OUTPUT_DIR / "all_candidates.geojson")
 
     # Save summary
     summary = {

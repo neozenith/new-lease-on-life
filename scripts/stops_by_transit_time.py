@@ -49,7 +49,22 @@ OUTPUT_BASE = SCRIPT_DIR.parent / "data/geojson/ptv/"
 OUTPUT_GEOJSON = OUTPUT_BASE / "stops_with_commute_times.geojson"
 OUTPUT_PARQUET = OUTPUT_BASE / "stops_with_commute_times.parquet"
 
+OUTPUT_GEOJSON_METRO_TRAM = OUTPUT_BASE / "stops_with_commute_times_metro_tram.geojson"
+OUTPUT_GEOJSON_METRO_TRAIN = OUTPUT_BASE / "stops_with_commute_times_metro_train.geojson"
+
 OUTPUT_HULL_GEOJSON = OUTPUT_BASE / "ptv_commute_tier_hulls.geojson"
+OUTPUT_HULL_GEOJSON_METRO_TRAM = OUTPUT_BASE / "ptv_commute_tier_hulls_metro_tram.geojson"
+OUTPUT_HULL_GEOJSON_METRO_TRAIN = OUTPUT_BASE / "ptv_commute_tier_hulls_metro_train.geojson"
+
+ALL_OUTPUTS = [
+    OUTPUT_GEOJSON,
+    OUTPUT_GEOJSON_METRO_TRAM,
+    OUTPUT_GEOJSON_METRO_TRAIN,
+    OUTPUT_PARQUET,
+    OUTPUT_HULL_GEOJSON,
+    OUTPUT_HULL_GEOJSON_METRO_TRAM,
+    OUTPUT_HULL_GEOJSON_METRO_TRAIN,
+]
 
 # Setup logging
 log = logging.getLogger(__name__)
@@ -188,8 +203,9 @@ def create_hulls(gdf):
     # gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['MODE'].isin(["METRO TRAIN", "METRO TRAM"])]
 
     # Define the tiers we want to keep
-
-    # gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['transit_time_minutes_nearest_tier'].isin(tiers)]
+    tier_size = 15
+    tiers = list(range(tier_size, 65, tier_size))  # 15, 30, 45, 60
+    gdf_ptv_tiers = gdf_ptv_tiers[gdf_ptv_tiers['transit_time_minutes_nearest_tier'].isin(tiers)]
 
     # Sort by tier in descending order (largest to smallest)
     # This ensures smaller tiers are drawn last and appear on top for hover interactions
@@ -198,6 +214,13 @@ def create_hulls(gdf):
     )
 
     save_geodataframe(gdf_ptv_tiers, OUTPUT_HULL_GEOJSON)
+    
+    gdf_ptv_tiers_train = gdf_ptv_tiers[gdf_ptv_tiers['MODE'].isin(["METRO TRAIN"])]
+    save_geodataframe(gdf_ptv_tiers_train, OUTPUT_HULL_GEOJSON_METRO_TRAIN)
+
+    gdf_ptv_tiers_tram = gdf_ptv_tiers[gdf_ptv_tiers['MODE'].isin(["METRO TRAM"])]
+    save_geodataframe(gdf_ptv_tiers_tram, OUTPUT_HULL_GEOJSON_METRO_TRAM)
+
 
 
 def main():
@@ -278,6 +301,11 @@ def main():
     # Save results
     result_gdf.to_file(OUTPUT_GEOJSON, driver="GeoJSON")
     result_gdf.to_parquet(OUTPUT_PARQUET)
+
+    result_gdf_tram = result_gdf[result_gdf['MODE'].isin(['METRO TRAM'])]
+    save_geodataframe(result_gdf_tram, OUTPUT_GEOJSON_METRO_TRAM)
+    result_gdf_train = result_gdf[result_gdf['MODE'].isin(['METRO TRAIN'])]
+    save_geodataframe(result_gdf_train, OUTPUT_GEOJSON_METRO_TRAIN)
 
     create_hulls(result_gdf)
 

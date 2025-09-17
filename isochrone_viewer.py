@@ -498,23 +498,23 @@ for mode in MODES.keys():
             visible_isochrone_layers.append(isochrone_layers[mode][tier])
 
 # LAYERS.append(sa1_layer)
-LAYERS.append(poa_layer)
-LAYERS.append(ra1_layer)
+# LAYERS.append(poa_layer)
+# LAYERS.append(ra1_layer)
 
 
-# LAYERS.append(traintram_outer_boundary_layer)
+LAYERS.append(traintram_outer_boundary_layer)
 
 # LAYERS.append(outer_boundary_layer)
 
-# LAYERS.append(tram_outer_boundary_layer)
+LAYERS.append(tram_outer_boundary_layer)
 
-# LAYERS.extend(visible_isochrone_layers)
+LAYERS.extend(visible_isochrone_layers)
 
 # # Add the PTV lines layer to show transit routes
 LAYERS.append(ptv_lines_layer)
 
 # Add the commute time hull polygons first (will be below stops)
-# LAYERS.append(ptv_commute_hulls_layer)
+LAYERS.append(ptv_commute_hulls_layer)
 
 # Add the stops on top for better visibility
 LAYERS.append(ptv_stops_layer)

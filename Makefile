@@ -27,7 +27,7 @@ aux_data: polygons_by_state commuting_hulls ptv_stops_subset postcode_polygons_s
 scrape_isochrones:
 	time uv run scripts/batch_isochrones_for_stops.py --status
 
-rentals: 
+rentals: consolidate_isochrones
 	time uv run scripts/process_realestate_candidates.py
 
 ######### DATA TIDY UP #########
@@ -47,8 +47,15 @@ all: aux_data migrate_geojson_geoparquet rentals
 # This will run all the steps to prepare the data for the isochrone viewer
 	uv run isochrone_viewer.py
 
+app: aux_data migrate_geojson_geoparquet rentals
+# This will run all the steps to prepare the data for the isochrone viewer
+	uv run -m webapp
+
 fix:
 	uvx rumdl check . --fix
 	uv run ruff format . --respect-gitignore
 	uv run ruff check --respect-gitignore --fix-only .
 	uv run ruff check --respect-gitignore --statistics .
+
+static_site:
+	uv run -m http.server --directory static/ 8002

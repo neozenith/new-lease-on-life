@@ -1,0 +1,173 @@
+{
+  "colors": {
+    "fill5min": [0, 200, 100, 100],
+    "line5min": [0, 150, 75, 200],
+    "fill15min": [0, 150, 200, 80],
+    "line15min": [0, 100, 150, 200],
+    "hover": [255, 150, 0, 120],
+    "commuteLineColor": [100, 100, 100, 150],
+    "tramLineColor": [255, 150, 50, 150],
+    "tramFillColor": [255, 150, 50, 200],
+    "trainLineColor": [50, 200, 50, 150],
+    "trainFillColor": [50, 200, 50, 200],
+    "candidateFillColor": [255, 255, 255, 200]
+
+  },
+  "layers": [
+    {
+      "id": "commute-tier-hulls-train",
+      "type": "GeoJsonLayer",
+      "data": "./data/ptv_commute_tier_hulls_metro_train.geojson",
+      "filled": false,
+      "stroked": true,
+      "extruded": false,
+      "pickable": false,
+      "getLineColor": [50, 200, 50, 150],
+      "getLineWidth": 1,
+      "lineWidthMinPixels": 1
+    },
+    {
+      "id": "commute-tier-hulls-tram",
+      "type": "GeoJsonLayer",
+      "data": "./data/ptv_commute_tier_hulls_metro_tram.geojson",
+      "filled": false,
+      "stroked": true,
+      "extruded": false,
+      "pickable": false,
+      "getLineColor": [255, 150, 50, 150],
+      "getLineWidth": 1,
+      "lineWidthMinPixels": 1
+    },
+    {
+      "id": "isochrones-5min",
+      "type": "GeoJsonLayer",
+      "data": "./data/5.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": false,
+      "getFillColor": "color:fill5min",
+      "getLineColor": "color:line5min",
+      "getLineWidth": 1,
+      "lineWidthMinPixels": 1,
+      "autoHighlight": false,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "isochrones-15min",
+      "type": "GeoJsonLayer",
+      "data": "./data/15.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": false,
+      "getFillColor": "color:fill15min",
+      "getLineColor": "color:line15min",
+      "getLineWidth": 1,
+      "lineWidthMinPixels": 1,
+      "autoHighlight": false,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "ptv-lines-tram",
+      "type": "GeoJsonLayer",
+      "data": "./data/lines_within_union_metro_tram.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": true,
+      "getFillColor": "color:tramFillColor",
+      "getLineColor": "color:tramLineColor",
+      "getLineWidth": 2,
+      "lineWidthMinPixels": 1,
+      "autoHighlight": true,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "ptv-lines-train",
+      "type": "GeoJsonLayer",
+      "data": "./data/lines_within_union_metro_train.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": true,
+      "getFillColor": "color:trainFillColor",
+      "getLineColor": "color:trainLineColor",
+      "getLineWidth": 2,
+      "lineWidthMinPixels": 1,
+      "autoHighlight": true,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "ptv-stops-tram",
+      "type": "GeoJsonLayer",
+      "data": "./data/stops_with_commute_times_metro_tram.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": true,
+      "getFillColor": "color:tramFillColor",
+      "getLineColor": "color:tramLineColor",
+      "getLineWidth": 5,
+      "lineWidthMinPixels": 5,
+      "autoHighlight": true,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "ptv-stops-train",
+      "type": "GeoJsonLayer",
+      "data": "./data/stops_with_commute_times_metro_train.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": true,
+      "getFillColor": "color:trainFillColor",
+      "getLineColor": "color:trainLineColor",
+      "getLineWidth": 5,
+      "lineWidthMinPixels": 5,
+      "autoHighlight": true,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    },
+    {
+      "id": "real-estate-candidates",
+      "type": "ScatterplotLayer",
+      "data": "./data/all_candidates.geojson",
+      "pickable": true,
+      "opacity": 0.8,
+      "stroked": true,
+      "filled": true,
+      "radiusScale": 1,
+      "radiusMinPixels": 10,
+      "radiusMaxPixels": 50,
+      "lineWidthMinPixels": 2,
+      "getPosition": "coordinates",
+      "getRadius": 20,
+      "getFillColor": "ptv_walkability_colour",
+      "getLineColor": [255, 255, 255, 255],
+      "getLineWidth": 2,
+      "autoHighlight": true,
+      "highlightColor": "color:hover",
+      "transitions": {
+        "getFillColor": 200
+      }
+    }
+  ]
+}

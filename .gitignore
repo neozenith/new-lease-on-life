@@ -39,7 +39,7 @@ ENV/
 
 # Output files
 isochrones/
-static/
+
 *.geojson
 *.parquet
 *.geoparquet
@@ -51,5 +51,8 @@ static/
 data/originals/
 data/
 .DS_Store
-
+.playwright-mcp/
 *.log
+!static/data/
+!static/data/*.geojson
+!static/data/*.parquet

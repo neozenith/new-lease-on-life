@@ -19,6 +19,7 @@ Shows a map centered and zoomed to the bounding box:
 #   "duckdb-extension-spatial",
 #   "python-dotenv>=1.0.0",
 #   "shapely",
+#   "ruamel.yaml",  # For reading/writing YAML config files
 # ]
 # ///
 
@@ -34,6 +35,7 @@ import panel as pn
 import param
 import pydeck as pdk
 from param.parameterized import Event
+from ruamel.yaml import YAML
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +47,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
-STATIC_LAYERS_CONFIG = SCRIPT_DIR / "static_layers_config.json"
+CONFIG = YAML().load((SCRIPT_DIR / "static_layers_config.yaml").read_text())
 
 # Bounding box coordinates
 TOP_LEFT = (-37.713453, 144.895298)  # (lat, lon)
@@ -88,7 +90,7 @@ class App(pn.viewable.Viewer):
 
     @cache
     def _load_static_layers(self) -> list[pdk.Layer]:
-        config = json.loads(STATIC_LAYERS_CONFIG.read_text())
+        config = CONFIG  # Override with YAML config
         output = []
         for layer in config["static_layers"]:
             if Path(layer["data"]).exists():

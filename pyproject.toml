@@ -20,6 +20,7 @@ dependencies = [
     "pyarrow>=21.0.0",
     "requests>=2.32.4",
     "tqdm>=4.67.1",
+    "ruamel-yaml>=0.18.15",
 ]
 
 
