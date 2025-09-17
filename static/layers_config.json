@@ -1,8 +1,8 @@
 {
   "colors": {
-    "fill5min": [0, 200, 100, 100],
+    "fill5min": [0, 200, 100, 20],
     "line5min": [0, 150, 75, 200],
-    "fill15min": [0, 150, 200, 80],
+    "fill15min": [0, 150, 200, 20],
     "line15min": [0, 100, 150, 200],
     "hover": [255, 150, 0, 120],
     "commuteLineColor": [100, 100, 100, 150],
@@ -22,9 +22,11 @@
       "stroked": true,
       "extruded": false,
       "pickable": false,
-      "getLineColor": [50, 200, 50, 150],
-      "getLineWidth": 1,
-      "lineWidthMinPixels": 1
+      "autoHighlight": false,
+      "getLineColor": [50, 200, 50, 200],
+      "getLineWidth": 4,
+      "lineWidthMinPixels": 1,
+      "lineWidthMaxPixels": 8
     },
     {
       "id": "commute-tier-hulls-tram",
@@ -34,9 +36,11 @@
       "stroked": true,
       "extruded": false,
       "pickable": false,
-      "getLineColor": [255, 150, 50, 150],
-      "getLineWidth": 1,
-      "lineWidthMinPixels": 1
+      "autoHighlight": false,
+      "getLineColor": [255, 150, 50, 200],
+      "getLineWidth": 4,
+      "lineWidthMinPixels": 2,
+      "lineWidthMaxPixels": 8
     },
     {
       "id": "isochrones-5min",
