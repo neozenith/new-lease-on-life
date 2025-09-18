@@ -116,7 +116,7 @@ class RealEstateProcessor:
             )
 
 
-    def output_file_for_url(self, url: str) -> Path:
+    def output_filepath_for_address(self, url: str) -> Path:
         """
         Generate a filename for the output based on the address.
 
@@ -137,6 +137,16 @@ class RealEstateProcessor:
 
     def geocode_address(self, address: str):
         """Geocode an address using Google Maps API. Returns (lat, lon) or (None, None) if not found."""
+        
+        # First check if address already exists in the all candidates file. 
+        # Like if I already have a saved output file committed in git then reuse existing lat/lon
+        if OUTPUT_WEBSITE_ALL_CANDIDATES.exists():
+            gdf = gpd.read_file(OUTPUT_WEBSITE_ALL_CANDIDATES)
+            match = gdf[gdf['address'] == address]
+            if not match.empty:
+                log.info(f"Reusing existing lat/lon for {address} from {OUTPUT_WEBSITE_ALL_CANDIDATES}")
+                return match.iloc[0]['geometry'].y, match.iloc[0]['geometry'].x
+
         if not self.gmaps:
             return None, None
         try:
@@ -157,12 +167,9 @@ class RealEstateProcessor:
         Returns:
             Path to the saved file or empty string if not saved
         """
-        if result.get("error"):
-            log.error(f"Error processing result: {result['error']}")
-            return ""
 
         # Generate a filepath based on the address
-        filepath = self.output_file_for_url(result["address"]).with_suffix(".geojson")
+        filepath = self.output_filepath_for_address(result["address"]).with_suffix(".geojson")
 
         records = []
         # Add property Point feature if lat/lon available or can be geocoded
@@ -196,7 +203,7 @@ class RealEstateProcessor:
         gdf = gpd.GeoDataFrame(records, crs="EPSG:4326")
         gdf.to_file(filepath, driver="GeoJSON")
         log.info(f"Saved GeoJSON result to {filepath}")
-        return gdf
+        return gpd.read_file(filepath)
 
 
 def load_yaml_file(filepath: str) -> Any:
@@ -257,7 +264,7 @@ async def main():
     all_gdfs = []
     for address in candidate_addresses:
         try:
-            file_path = processor.output_file_for_url(address).with_suffix(".geojson")
+            file_path = processor.output_filepath_for_address(address).with_suffix(".geojson")
 
             if (
                 file_path.exists()
@@ -266,27 +273,27 @@ async def main():
                 log.info(f"SKIP {address}, already processed: {file_path}")
                 gdf = gpd.read_file(file_path)
                 all_gdfs.append(gdf)
-                continue
+            else:
 
-            log.info(f"Processing: {address}")
+                log.info(f"Processing: {address}")
 
-            # Prepare result
-            result = {
-                "address": address,
-                "lat": None,
-                "lon": None,
-                "processed_at": datetime.now().isoformat(),
-            }
+                # Prepare result
+                result = {
+                    "address": address,
+                    "lat": None,
+                    "lon": None,
+                    "processed_at": datetime.now().isoformat(),
+                }
 
-            # Save the result as GeoJSON
-            gdf = processor.save_geojson_result(result)
-            all_gdfs.append(gdf)
-            results.append(result)
+                # Save the result as GeoJSON
+                gdf = processor.save_geojson_result(result)
+                all_gdfs.append(gdf)
+                results.append(result)
 
-            # Add a small delay between API requests
-            delay = 1 + (secrets.randbelow(20) / 10)
-            log.debug(f"Waiting {delay:.1f} seconds before next request")
-            await asyncio.sleep(delay)
+                # Add a small delay between API requests
+                delay = 1 + (secrets.randbelow(20) / 10)
+                log.debug(f"Waiting {delay:.1f} seconds before next request")
+                await asyncio.sleep(delay)
 
         except Exception as e:
             log.error(f"Error processing candidate address {address}: {e}")

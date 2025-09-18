@@ -14,6 +14,8 @@
 
   },
   "layers": [
+    
+    
     {
       "id": "commute-tier-hulls-train",
       "type": "GeoJsonLayer",
@@ -23,6 +25,7 @@
       "extruded": false,
       "pickable": true,
       "autoHighlight": false,
+      "lineCapRounded": true,
       "getLineColor": [50, 200, 50, 200],
       "getLineWidth": 4,
       "lineWidthMinPixels": 1,
@@ -37,6 +40,8 @@
       "extruded": false,
       "pickable": true,
       "autoHighlight": false,
+      "lineCapRounded": true,
+      "lineBillboard": true,
       "getLineColor": [255, 150, 50, 200],
       "getLineWidth": 4,
       "lineWidthMinPixels": 2,
@@ -77,6 +82,22 @@
       "transitions": {
         "getFillColor": 200
       }
+    },
+    {
+      "id": "postcodes-with-trams-trains",
+      "type": "GeoJsonLayer",
+      "data": "./data/selected_postcodes_with_trams_trains.geojson",
+      "filled": true,
+      "stroked": true,
+      "extruded": false,
+      "pickable": true,
+      "autoHighlight": true,
+      "highlightColor": [200, 50, 200, 70],
+      "getLineColor": [200, 50, 200, 100],
+      "getFillColor": [200, 50, 200, 0],
+      "getLineWidth": 6,
+      "lineWidthMinPixels": 4,
+      "lineWidthMaxPixels": 18
     },
     {
       "id": "ptv-lines-tram",
@@ -124,8 +145,9 @@
       "pickable": true,
       "getFillColor": "color:tramFillColor",
       "getLineColor": "color:tramLineColor",
-      "getLineWidth": 5,
-      "lineWidthMinPixels": 5,
+      "getPointRadius": 2,
+      "pointRadiusMinPixels": 2,
+      "pointRadiusMaxPixels": 8,
       "autoHighlight": true,
       "highlightColor": "color:hover",
       "transitions": {
@@ -142,8 +164,9 @@
       "pickable": true,
       "getFillColor": "color:trainFillColor",
       "getLineColor": "color:trainLineColor",
-      "getLineWidth": 5,
-      "lineWidthMinPixels": 5,
+      "getPointRadius": 2,
+      "pointRadiusMinPixels": 2,
+      "pointRadiusMaxPixels": 8,
       "autoHighlight": true,
       "highlightColor": "color:hover",
       "transitions": {
@@ -152,18 +175,18 @@
     },
     {
       "id": "real-estate-candidates",
-      "type": "ScatterplotLayer",
+      "type": "GeoJsonLayer",
       "data": "./data/all_candidates.geojson",
       "pickable": true,
       "opacity": 0.8,
       "stroked": true,
       "filled": true,
-      "radiusScale": 1,
-      "radiusMinPixels": 10,
-      "radiusMaxPixels": 50,
+      "getPointRadius": 20,
+      "pointRadiusMinPixels": 10,
+      "pointRadiusMaxPixels": 30,
       "lineWidthMinPixels": 2,
-      "getPosition": "coordinates",
-      "getRadius": 20,
+      "lineWidthMaxPixels": 6,
+
       "getFillColor": "ptv_walkability_colour",
       "getLineColor": [255, 255, 255, 255],
       "getLineWidth": 2,

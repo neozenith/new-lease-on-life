@@ -8,7 +8,7 @@
 #   "tqdm"
 # ]
 # ///
-
+import json
 import argparse
 import logging
 import pathlib
@@ -52,6 +52,7 @@ def check_output_up_to_date():
     Check if the output files are up to date with respect to the input files.
     """
     files_to_process = {}
+    
     for target, input_file in input_to_output_mapping.items():
         selected_output_file = (
             OUTPUT_ROOT / f"selected_{target}.geojson"
@@ -59,7 +60,6 @@ def check_output_up_to_date():
         unioned_output_file = (
             OUTPUT_ROOT / f"unioned_{target}.geojson"
         )  # Unions the selected polygons
-
         if dirty([selected_output_file, unioned_output_file], input_file):
             files_to_process[target] = input_file
             log.info(f"{target} needs processing.")
@@ -74,7 +74,7 @@ def filter_for_target(
     Filter the GeoDataFrame of polygons based on the target and code list.
     """
     if target in ["postcodes"]:
-        return gdf_polygons[gdf_polygons[code_col].astype(str).isin(code_list)]
+        return gdf_polygons[gdf_polygons[code_col].astype(str).isin(code_list)].copy()
     else:
         return gpd.sjoin(gdf_polygons, gdf_stops, how="inner", predicate="intersects")
 
@@ -91,6 +91,14 @@ def extract_postcode_polygons():
     # Load postcodes from CSV (expects a column named 'postcode')
     postcodes = pd.read_csv(POSTCODES_CSV)
     postcode_list = postcodes.iloc[:, 1].astype(str).tolist()
+    suburbs_by_postcode = postcodes.groupby(postcodes.columns[1])[postcodes.columns[0]].apply(list).to_dict()
+    suburbs_by_postcode = {str(k): ', '.join(v) for k, v in suburbs_by_postcode.items()}
+
+    
+    log.info(json.dumps(suburbs_by_postcode, indent=2))
+    
+    postcode_boundaries["suburbs"] = postcode_boundaries["POA_CODE21"].map(suburbs_by_postcode)
+
 
     gdf_stops = gpd.read_parquet(STOPS_GEOJSON)
     gdf_stops_trams_trains = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAIN", "METRO TRAM"])].copy()
@@ -113,8 +121,13 @@ def extract_postcode_polygons():
             )
             gdf_input = gpd.read_parquet(input_file)
             gdf_polygons = filter_for_target(target, gdf_input, gdf_stops_trams_trains)
+        
+        if target.startswith("postcodes"):
+            gdf_polygons["suburbs"] = gdf_polygons["POA_CODE21"].map(suburbs_by_postcode)
+            gdf_polygons = gdf_polygons[~gdf_polygons["suburbs"].isna()].copy()
+            gdf_polygons = gdf_polygons.drop_duplicates(subset=["POA_CODE21"], keep="first")
 
-        gdf = gdf_polygons
+        gdf = gdf_polygons.copy()
         unioned_geom = gdf.geometry.union_all()
         unioned_gdf = gpd.GeoDataFrame(geometry=[unioned_geom], crs=gdf.crs)
 

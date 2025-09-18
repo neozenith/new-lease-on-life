@@ -52,36 +52,32 @@ function createLayersFromConfig(config) {
         const layerType = layerConfig.type || 'GeoJsonLayer';
 
         // Handle different layer types
-        if (layerType === 'ScatterplotLayer') {
-            // For ScatterplotLayer with GeoJSON data
+        if (layerType === 'GeoJsonLayer' && processedConfig.id === 'real-estate-candidates') {
+            // Special handling for real estate candidates layer
             if (typeof processedConfig.data === 'string' && processedConfig.data.endsWith('.geojson')) {
                 // Load GeoJSON and convert to points array
                 fetch(processedConfig.data)
                     .then(response => response.json())
                     .then(geojson => {
-                        const points = geojson.features.map(feature => ({
+                        const expanded_features = geojson.features.map(feature => ({
                             ...feature.properties,
-                            coordinates: feature.geometry.coordinates
+                            coordinates: feature.geometry.coordinates,
+                            geometry: feature.geometry
                         }));
-
                         // Update the layer with processed data
                         const updatedConfig = {...processedConfig};
-                        updatedConfig.data = points;
+                        updatedConfig.data = expanded_features; // Set the results of loading the datafile to the processed features
 
                         // Handle color extraction from property
                         if (updatedConfig.getFillColor === 'ptv_walkability_colour') {
-                            updatedConfig.getFillColor = d => {
+                            updatedConfig.getFillColor = d => { // Sets this property to a function that extracts color from each data point
                                 const hex = d.ptv_walkability_colour;
                                 return hexToRgbA(hex) || [255, 255, 255, 255];
                             };
                         }
 
-                        // Handle position extraction
-                        if (updatedConfig.getPosition === 'coordinates') {
-                            updatedConfig.getPosition = d => d.coordinates;
-                        }
-
-                        const newLayer = new ScatterplotLayer(updatedConfig);
+                        // Create new GeoJsonLayer with updated data
+                        const newLayer = new GeoJsonLayer(updatedConfig);
                         // Update the deck with the new layer
                         const currentLayers = deckgl.props.layers || [];
                         const filteredLayers = currentLayers.filter(l => l.id !== updatedConfig.id);
@@ -89,7 +85,7 @@ function createLayersFromConfig(config) {
                     });
 
                 // Return placeholder layer while loading
-                return new ScatterplotLayer({
+                return new GeoJsonLayer({
                     ...processedConfig,
                     data: []
                 });
@@ -106,12 +102,9 @@ function createLayersFromConfig(config) {
         // Remove the type property as it's not needed by deck.gl
         delete processedConfig.type;
 
-        // Return appropriate layer type
-        if (layerType === 'ScatterplotLayer') {
-            return new ScatterplotLayer(processedConfig);
-        } else {
-            return new GeoJsonLayer(processedConfig);
-        }
+        
+        return new GeoJsonLayer(processedConfig);
+        
     });
 }
 
@@ -173,6 +166,10 @@ let deckgl = new DeckGL({
             html += `<strong>${props.MODE}</strong><br/>`;
             html += `Transit time: ${Math.round(props.transit_time_minutes_nearest_tier)} minutes<br/>`;
             html += `Stations included: ${props.point_count || props.STOP_NAME || 'N/A'}<br/>`;
+        }
+        else if (props.POA_NAME21 && props.suburbs) {
+            html += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
+            html += `Suburbs: ${props.suburbs}<br/>`;
         }
         // Add stop name if available (for isochrones)
         else if (props.stop_name) {
