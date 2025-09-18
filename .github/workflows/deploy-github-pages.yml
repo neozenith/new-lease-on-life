@@ -5,6 +5,7 @@ on:
   push:
     branches: ["main"]
     paths:
+      - 'candidates.yml'
       - 'static/**'
       - 'scripts/process_realestate_candidates.py'
       - '.github/workflows/deploy-github-pages.yml'
