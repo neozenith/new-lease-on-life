@@ -27,6 +27,8 @@ concurrency:
 jobs:
   # Build job
   build:
+    env:
+      GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
