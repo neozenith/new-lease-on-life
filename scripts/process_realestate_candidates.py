@@ -55,16 +55,22 @@ log = logging.getLogger(__name__)
 
 # Get the path of this script
 SCRIPT_DIR = Path(__file__).parent.resolve()
+PROJECT_DIR = SCRIPT_DIR.parent.resolve()
 
 # Constants
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
 CANDIDATES_YAML = SCRIPT_DIR.parent / "candidates.yml"
 COMMUTES_YAML = SCRIPT_DIR.parent / "known_commutes.yml"
-OUTPUT_DIR = SCRIPT_DIR.parent / "data/candidate_real_estate"
 
-INPUT_ISOCHRONE_FOOT_5MIN = SCRIPT_DIR.parent / "data/isochrones_concatenated/foot/5.geojson"
-INPUT_ISOCHRONE_FOOT_15MIN = SCRIPT_DIR.parent / "data/isochrones_concatenated/foot/15.geojson"
+OUTPUT_DIR = SCRIPT_DIR.parent / "data/candidate_real_estate"
+OUTPUT_ALL_CANDIDATES = OUTPUT_DIR / "all_candidates.geojson"
+
+WEBSITE_OUTPUT_DIR = SCRIPT_DIR.parent / "static/data/"
+OUTPUT_WEBSITE_ALL_CANDIDATES = WEBSITE_OUTPUT_DIR / "all_candidates.geojson"
+
+INPUT_ISOCHRONE_FOOT_5MIN = PROJECT_DIR / "static/data/5.geojson"
+INPUT_ISOCHRONE_FOOT_15MIN = PROJECT_DIR / "static/data/15.geojson"
 
 # Ensure output directory exists
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -287,7 +293,9 @@ async def main():
 
     # Combine all GeoDataFrames and save a summary file
     combined_gdf = gpd.GeoDataFrame(pd.concat(all_gdfs, ignore_index=True), crs="EPSG:4326")
-    save_geodataframe(combined_gdf, OUTPUT_DIR / "all_candidates.geojson")
+    save_geodataframe(combined_gdf, OUTPUT_ALL_CANDIDATES)
+    save_geodataframe(combined_gdf, OUTPUT_WEBSITE_ALL_CANDIDATES)
+    log.info(f"Saved combined GeoDataFrame to {OUTPUT_ALL_CANDIDATES} and {OUTPUT_WEBSITE_ALL_CANDIDATES}")
 
     # Save summary
     summary = {
