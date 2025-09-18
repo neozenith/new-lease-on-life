@@ -30,3 +30,15 @@ It also makes use of Google Directions API
 
 - [Google Maps Directions API (Legacy)](https://developers.google.com/maps/documentation/directions)
 
+Thanks to Victoria Government:
+
+- [Public Transport Lines and Stops (GeoJSON)](https://discover.data.vic.gov.au/dataset/public-transport-lines-and-stops)
+
+Thanks to Australian Bureau of Statistics:
+
+- [Postcode Polygon Boundaries (SHP Files)](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files)
+
+Also thanks to GeoPandas for the easy assist manipulating all of these geospatial files
+
+- [GeoPandas](https://geopandas.org/en/stable/)
+
