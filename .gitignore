@@ -55,4 +55,4 @@ data/
 *.log
 !static/data/
 !static/data/*.geojson
-!static/data/*.parquet
+# !static/data/*.parquet
