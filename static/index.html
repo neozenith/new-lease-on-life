@@ -78,6 +78,50 @@
         </p>
     </div>
 
+    <div id="location-control" style="position: absolute; top: 20px; right: 20px; z-index: 1;">
+        <button id="get-location-btn" style="
+            padding: 10px 16px;
+            background: white;
+            border: none;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        ">
+            <span style="font-size: 16px;">📍</span>
+            <span>Show My Location</span>
+        </button>
+        <button id="center-location-btn" style="
+            margin-top: 8px;
+            padding: 10px 16px;
+            background: white;
+            border: none;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        ">
+            <span style="font-size: 16px;">🎯</span>
+            <span>Center on Location</span>
+        </button>
+        <div id="location-status" style="
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 12px;
+            display: none;
+        "></div>
+    </div>
+
     <!-- Load the external JavaScript file -->
     <script src="./scripts.js"></script>
 </body>
