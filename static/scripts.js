@@ -402,3 +402,115 @@ if (centerBtn) {
         }
     });
 }
+
+// Layer management functionality
+const layerVisibility = {};
+const layerDisplayNames = {
+    'commute-tier-hulls-train': 'Train Commute Zones',
+    'commute-tier-hulls-tram': 'Tram Commute Zones',
+    'isochrones-5min': '5-minute Walking',
+    'isochrones-15min': '15-minute Walking',
+    'postcodes-with-trams-trains': 'Serviced Postcodes',
+    'ptv-lines-tram': 'Tram Lines',
+    'ptv-lines-train': 'Train Lines',
+    'ptv-stops-tram': 'Tram Stops',
+    'ptv-stops-train': 'Train Stops',
+    'real-estate-candidates': 'Property Candidates'
+};
+
+// Function to populate layer toggles
+function populateLayerToggles() {
+    const layersSection = document.getElementById('layers-section');
+    if (!layersSection || !window.deckgl) return;
+
+    // Clear existing content
+    layersSection.innerHTML = '';
+
+    // Get all layers except user location
+    const layers = window.deckgl.props.layers || [];
+    const layersToShow = layers.filter(l => l.id !== 'user-location');
+
+    // Create toggle for each layer
+    layersToShow.forEach(layer => {
+        // Initialize visibility state if not set
+        if (layerVisibility[layer.id] === undefined) {
+            layerVisibility[layer.id] = layer.props.visible !== false;
+        }
+
+        const layerItem = document.createElement('div');
+        layerItem.className = 'layer-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `layer-toggle-${layer.id}`;
+        checkbox.checked = layerVisibility[layer.id];
+
+        const label = document.createElement('label');
+        label.htmlFor = `layer-toggle-${layer.id}`;
+        label.textContent = layerDisplayNames[layer.id] || layer.id;
+
+        // Add event listener to toggle layer visibility
+        checkbox.addEventListener('change', function() {
+            toggleLayerVisibility(layer.id, checkbox.checked);
+        });
+
+        layerItem.appendChild(checkbox);
+        layerItem.appendChild(label);
+        layersSection.appendChild(layerItem);
+    });
+}
+
+// Function to toggle layer visibility
+function toggleLayerVisibility(layerId, visible) {
+    layerVisibility[layerId] = visible;
+
+    // Get current layers
+    const layers = window.deckgl.props.layers || [];
+
+    // Update the specific layer's visibility
+    const updatedLayers = layers.map(layer => {
+        if (layer.id === layerId) {
+            // Instead of recreating the layer, just update its visibility property
+            // This preserves all the original data and properties
+            layer.props.visible = visible;
+            // Force a re-render by creating a shallow clone
+            return layer.clone({
+                visible: visible
+            });
+        }
+        return layer;
+    });
+
+    // Update deck with modified layers
+    window.deckgl.setProps({ layers: updatedLayers });
+}
+
+// Handle expand/collapse of layers section
+const infoHeader = document.getElementById('info-header');
+const layersSection = document.getElementById('layers-section');
+const expandIcon = document.getElementById('expand-icon');
+
+if (infoHeader && layersSection && expandIcon) {
+    infoHeader.addEventListener('click', function() {
+        layersSection.classList.toggle('expanded');
+        expandIcon.classList.toggle('expanded');
+
+        // Populate layer toggles when first expanded
+        if (layersSection.classList.contains('expanded')) {
+            populateLayerToggles();
+        }
+    });
+}
+
+// Update layer toggles when layers change
+const originalSetProps = window.deckgl.setProps.bind(window.deckgl);
+window.deckgl.setProps = function(props) {
+    const result = originalSetProps(props);
+
+    // If layers changed and the section is expanded, update toggles
+    if (props.layers && layersSection && layersSection.classList.contains('expanded')) {
+        setTimeout(populateLayerToggles, 100); // Small delay to ensure layers are updated
+    }
+
+    return result;
+};

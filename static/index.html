@@ -55,6 +55,10 @@
         #info h3 {
             margin: 0 0 8px 0;
             font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         #info p {
@@ -62,13 +66,58 @@
             font-size: 14px;
             color: #666;
         }
+
+        #layers-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        #layers-section.expanded {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .layer-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .layer-item label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .expand-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        #layers-divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 8px 0;
+        }
     </style>
 </head>
 <body>
     <div id="container"></div>
 
     <div id="info">
-        <h3>Transport Analysis</h3>
+        <h3 id="info-header">
+            Transport Analysis
+            <span class="expand-icon" id="expand-icon">▶</span>
+        </h3>
         <p style="margin-bottom: 4px;">Victoria transit accessibility</p>
         <p style="font-size: 11px; margin-top: 4px; line-height: 1.4;">
             <span style="color: #00C864;">■ 5min</span> ·
@@ -76,6 +125,10 @@
             <span style="color: #32C832;">─ Metro Train</span> ·
             <span style="color: #FF9632;">─ Metro Tram</span>
         </p>
+        <div id="layers-divider"></div>
+        <div id="layers-section">
+            <!-- Layer toggles will be populated by JavaScript -->
+        </div>
     </div>
 
     <div id="location-control" style="position: absolute; top: 20px; right: 20px; z-index: 1;">
