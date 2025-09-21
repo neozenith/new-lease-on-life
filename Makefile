@@ -57,5 +57,46 @@ fix:
 	uv run ruff check --respect-gitignore --fix-only .
 	uv run ruff check --respect-gitignore --statistics .
 
-static_site:
+##################################################
+# MAPPING STATIC SITE DATA TO SOURCE JOBS
+##################################################
+
+data/isochrones_concatenated/foot/5.geojson data/isochrones_concatenated/foot/15.geojson: fix_geojson
+
+data/geojson/ptv/ptv_commute_tier_hulls_metro_train.geojson data/geojson/ptv/ptv_commute_tier_hulls_metro_tram.geojson \
+data/geojson/ptv/boundaries/selected_postcodes_with_trams_trains.geojson \
+data/geojson/ptv/stops_with_commute_times_metro_train.geojson data/geojson/ptv/stops_with_commute_times_metro_tram.geojson: commuting_hulls
+
+##################################################
+# STATIC SITE DATA
+##################################################
+static/data/5.geojson: data/isochrones_concatenated/foot/5.geojson
+	cp $< $@
+static/data/15.geojson: data/isochrones_concatenated/foot/15.geojson
+	cp $< $@
+
+static/data/all_candidates.geojson: data/candidate_real_estate/all_candidates.geojson
+	cp $< $@
+
+static/data/lines_within_union_metro_tram.geojson: data/geojson/ptv/lines_within_union_metro_tram.geojson
+	cp $< $@
+static/data/lines_within_union_metro_train.geojson: data/geojson/ptv/lines_within_union_metro_train.geojson
+	cp $< $@
+static/data/ptv_commute_tier_hulls_metro_train.geojson: data/geojson/ptv/ptv_commute_tier_hulls_metro_train.geojson
+	cp $< $@
+static/data/ptv_commute_tier_hulls_metro_tram.geojson: data/geojson/ptv/ptv_commute_tier_hulls_metro_tram.geojson
+	cp $< $@
+static/data/selected_postcodes_with_trams_trains.geojson: data/geojson/ptv/boundaries/selected_postcodes_with_trams_trains.geojson
+	cp $< $@
+static/data/stops_with_commute_times_metro_train.geojson: data/geojson/ptv/stops_with_commute_times_metro_train.geojson
+	cp $< $@
+static/data/stops_with_commute_times_metro_tram.geojson: data/geojson/ptv/stops_with_commute_times_metro_tram.geojson
+	cp $< $@
+
+static_site: static/data/5.geojson static/data/15.geojson static/data/all_candidates.geojson \
+	static/data/lines_within_union_metro_tram.geojson static/data/lines_within_union_metro_train.geojson \
+	static/data/ptv_commute_tier_hulls_metro_train.geojson static/data/ptv_commute_tier_hulls_metro_tram.geojson \
+	static/data/selected_postcodes_with_trams_trains.geojson \
+	static/data/stops_with_commute_times_metro_train.geojson static/data/stops_with_commute_times_metro_tram.geojson
+	
 	uv run -m http.server --directory static/ 8002

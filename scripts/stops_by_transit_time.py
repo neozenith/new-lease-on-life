@@ -304,7 +304,7 @@ def main():
 
     result_gdf_tram = result_gdf[result_gdf['MODE'].isin(['METRO TRAM'])]
     save_geodataframe(result_gdf_tram, OUTPUT_GEOJSON_METRO_TRAM)
-    result_gdf_train = result_gdf[result_gdf['MODE'].isin(['METRO TRAIN'])]
+    result_gdf_train = result_gdf[result_gdf['MODE'].isin(['METRO TRAIN', 'REGIONAL TRAIN'])]
     save_geodataframe(result_gdf_train, OUTPUT_GEOJSON_METRO_TRAIN)
 
     create_hulls(result_gdf)

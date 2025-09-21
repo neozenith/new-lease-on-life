@@ -101,7 +101,7 @@ def extract_postcode_polygons():
 
 
     gdf_stops = gpd.read_parquet(STOPS_GEOJSON)
-    gdf_stops_trams_trains = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAIN", "METRO TRAM"])].copy()
+    gdf_stops_trams_trains = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAIN", "METRO TRAM", "REGIONAL TRAIN"])].copy()
     gdf_stops_trams = gdf_stops[gdf_stops["MODE"].isin(["METRO TRAM"])].copy()
 
     for target, input_file in work_to_do:

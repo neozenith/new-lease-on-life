@@ -201,6 +201,242 @@ window.deckgl = new DeckGL({
     onHover: ({object, x, y}) => {
         // Hover handling is managed by deck.gl internally
         // Tooltip display is handled by getTooltip
+    },
+
+    // Handle click events for selection
+    onClick: ({object, layer}) => {
+        if (!object) {
+            // Clicked on empty space - clear all selections
+            clearAllSelections();
+            return;
+        }
+
+        handleItemClick(object, layer);
+    }
+});
+
+// Selection Management System
+const selectedItems = new Map(); // Map to store selected items by type
+const maxSelectionsByType = {
+    'real-estate-candidates': 2,
+    'postcodes': 2,
+    'ptv-stops-tram': 1,
+    'ptv-stops-train': 1
+};
+
+// Get item type from layer ID
+function getItemType(layer) {
+    const layerId = layer.id;
+
+    // Check for real estate candidates
+    if (layerId === 'real-estate-candidates') {
+        return 'real-estate-candidates';
+    }
+
+    // Check for postcodes
+    if (layerId === 'selected_postcodes' || layerId === 'unioned_postcodes' ||
+        layerId === 'postcodes-selected' || layerId === 'postcodes-unioned') {
+        return 'postcodes';
+    }
+
+    // Check for tram stops
+    if (layerId === 'ptv-stops-tram') {
+        return 'ptv-stops-tram';
+    }
+
+    // Check for train stops
+    if (layerId === 'ptv-stops-train') {
+        return 'ptv-stops-train';
+    }
+
+    return null; // Not a selectable type
+}
+
+// Generate unique ID for an item
+function getItemId(object, layer) {
+    const props = object.properties || object;
+    const type = getItemType(layer);
+
+    if (type === 'real-estate-candidates' && props.address) {
+        return `${type}-${props.address}`;
+    } else if (type === 'postcodes' && props.POA_NAME21) {
+        return `${type}-${props.POA_NAME21}`;
+    } else if ((type === 'ptv-stops-tram' || type === 'ptv-stops-train') && props.stop_name) {
+        return `${type}-${props.stop_id || props.stop_name}`;
+    }
+
+    // Fallback to coordinates if available
+    if (object.geometry && object.geometry.coordinates) {
+        const coords = object.geometry.coordinates;
+        return `${type}-${coords[0]}-${coords[1]}`;
+    }
+
+    return `${type}-${Date.now()}`; // Last resort
+}
+
+// Handle item click
+function handleItemClick(object, layer) {
+    const type = getItemType(layer);
+
+    if (!type) {
+        return; // Not a selectable layer
+    }
+
+    const itemId = getItemId(object, layer);
+    const currentTypeSelections = Array.from(selectedItems.values()).filter(item => item.type === type);
+
+    // Check if this exact item is already selected
+    if (selectedItems.has(itemId)) {
+        // Toggle off - remove this item
+        selectedItems.delete(itemId);
+    } else {
+        // Check if clicking on a different type - clear all selections
+        const hasOtherTypes = Array.from(selectedItems.values()).some(item => item.type !== type);
+        if (hasOtherTypes) {
+            clearAllSelections();
+        }
+
+        // Check max selections for this type
+        const maxForType = maxSelectionsByType[type] || 999;
+
+        if (currentTypeSelections.length >= maxForType) {
+            // Remove oldest selection of this type
+            const oldestKey = Array.from(selectedItems.keys()).find(key =>
+                selectedItems.get(key).type === type
+            );
+            if (oldestKey) {
+                selectedItems.delete(oldestKey);
+            }
+        }
+
+        // Add new selection
+        selectedItems.set(itemId, {
+            type: type,
+            object: object,
+            layer: layer,
+            properties: object.properties || object
+        });
+    }
+
+    updateSelectionDisplay();
+    updateLayerHighlights();
+}
+
+// Clear all selections
+function clearAllSelections() {
+    selectedItems.clear();
+    updateSelectionDisplay();
+    updateLayerHighlights();
+}
+
+// Update the selection panel display
+function updateSelectionDisplay() {
+    const panel = document.getElementById('selection-panel');
+    const content = document.getElementById('selection-content');
+
+    if (selectedItems.size === 0) {
+        // Hide panel
+        panel.style.height = '0';
+        content.innerHTML = '';
+        return;
+    }
+
+    // Show panel - take up bottom third of screen
+    panel.style.height = '33vh';
+
+    // Build content HTML
+    let html = '';
+    const itemsByType = new Map();
+
+    // Group items by type
+    selectedItems.forEach((item, id) => {
+        if (!itemsByType.has(item.type)) {
+            itemsByType.set(item.type, []);
+        }
+        itemsByType.get(item.type).push(item);
+    });
+
+    // Display items grouped by type
+    itemsByType.forEach((items, type) => {
+        const typeLabel = {
+            'real-estate-candidates': 'Real Estate Properties',
+            'postcodes': 'Postcodes',
+            'ptv-stops-tram': 'Tram Stops',
+            'ptv-stops-train': 'Train Stations'
+        }[type] || type;
+
+        html += `<div style="margin-bottom: 20px;">`;
+        html += `<h4 style="margin: 0 0 12px 0; color: #333; font-size: 14px; font-weight: bold;">${typeLabel}</h4>`;
+
+        items.forEach((item, index) => {
+            const props = item.properties;
+            html += `<div style="margin-bottom: 12px; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
+
+            if (type === 'real-estate-candidates') {
+                html += `<strong>${props.address}</strong><br/>`;
+                if (props.ptv_walkable_5min !== undefined) {
+                    html += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes ✓' : 'No ✗'}<br/>`;
+                }
+                if (props.ptv_walkable_15min !== undefined) {
+                    html += `15-min walkable: ${props.ptv_walkable_15min ? 'Yes ✓' : 'No ✗'}<br/>`;
+                }
+            } else if (type === 'postcodes') {
+                html += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
+                if (props.suburbs) {
+                    html += `Suburbs: ${props.suburbs}<br/>`;
+                }
+            } else if (type === 'ptv-stops-tram' || type === 'ptv-stops-train') {
+                html += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
+                if (props.stop_id || props.STOP_ID) {
+                    html += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
+                }
+                if (props.routes || props.ROUTES) {
+                    html += `Routes: ${props.routes || props.ROUTES}<br/>`;
+                }
+            }
+
+            html += `</div>`;
+        });
+
+        html += `</div>`;
+    });
+
+    content.innerHTML = html;
+}
+
+// Update layer highlights to show selected items
+function updateLayerHighlights() {
+    const layers = window.deckgl.props.layers || [];
+    const selectedIds = new Set();
+
+    // Collect IDs of selected items
+    selectedItems.forEach((item, id) => {
+        const props = item.properties;
+        if (props.address) selectedIds.add(props.address);
+        if (props.POA_NAME21) selectedIds.add(props.POA_NAME21);
+        if (props.stop_id) selectedIds.add(props.stop_id);
+        if (props.STOP_ID) selectedIds.add(props.STOP_ID);
+        if (props.stop_name) selectedIds.add(props.stop_name);
+        if (props.STOP_NAME) selectedIds.add(props.STOP_NAME);
+    });
+
+    // Update layers with selection highlighting
+    const updatedLayers = layers.map(layer => {
+        // For now, we'll rely on visual feedback from the selection panel
+        // Future enhancement: add visual highlighting on the map
+        return layer;
+    });
+
+    window.deckgl.setProps({ layers: updatedLayers });
+}
+
+// Handle close button for selection panel
+document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.getElementById('close-selection-panel');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            clearAllSelections();
+        });
     }
 });
 
@@ -317,9 +553,23 @@ function showLocationStatus(message, isError = false) {
     }, 5000);
 }
 
+// Function to attach location event listeners
+function attachLocationEventListeners() {
+    const getLocationBtn = document.getElementById('get-location-btn');
+    const centerLocationBtn = document.getElementById('center-location-btn');
+
+    if (getLocationBtn) {
+        getLocationBtn.addEventListener('click', handleGetLocation);
+    }
+
+    if (centerLocationBtn) {
+        centerLocationBtn.addEventListener('click', handleCenterLocation);
+    }
+}
+
 // Handle location button click
-document.getElementById('get-location-btn').addEventListener('click', function() {
-    const button = this;
+function handleGetLocation() {
+    const button = document.getElementById('get-location-btn');
 
     // Check if geolocation is available
     if (!navigator.geolocation) {
@@ -390,17 +640,14 @@ document.getElementById('get-location-btn').addEventListener('click', function()
             maximumAge: 0
         }
     );
-});
+}
 
 // Handle center on location button click
-const centerBtn = document.getElementById('center-location-btn');
-if (centerBtn) {
-    centerBtn.addEventListener('click', function() {
-        if (userLocationCoords) {
-            centerOnUserLocation();
-            showLocationStatus('Centered on your location', false);
-        }
-    });
+function handleCenterLocation() {
+    if (userLocationCoords) {
+        centerOnUserLocation();
+        showLocationStatus('Centered on your location', false);
+    }
 }
 
 // Layer management functionality
@@ -458,6 +705,72 @@ function populateLayerToggles() {
         layerItem.appendChild(label);
         layersSection.appendChild(layerItem);
     });
+
+    // Create and append location control section
+    const locationControl = document.createElement('div');
+    locationControl.id = 'location-control';
+    locationControl.style.cssText = 'margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;';
+
+    // Create "Show My Location" button
+    const getLocationBtn = document.createElement('button');
+    getLocationBtn.id = 'get-location-btn';
+    getLocationBtn.style.cssText = `
+        padding: 10px 16px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        justify-content: center;
+    `;
+    getLocationBtn.innerHTML = '<span style="font-size: 16px;">📍</span><span>Show My Location</span>';
+
+    // Create "Center on Location" button
+    const centerLocationBtn = document.createElement('button');
+    centerLocationBtn.id = 'center-location-btn';
+    centerLocationBtn.style.cssText = `
+        margin-top: 8px;
+        padding: 10px 16px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        justify-content: center;
+    `;
+    centerLocationBtn.innerHTML = '<span style="font-size: 16px;">🎯</span><span>Center on Location</span>';
+
+    // Create location status div
+    const locationStatus = document.createElement('div');
+    locationStatus.id = 'location-status';
+    locationStatus.style.cssText = `
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #e0e0e0;
+        font-size: 12px;
+        display: none;
+    `;
+
+    // Append elements to location control
+    locationControl.appendChild(getLocationBtn);
+    locationControl.appendChild(centerLocationBtn);
+    locationControl.appendChild(locationStatus);
+
+    // Append location control to layers section
+    layersSection.appendChild(locationControl);
+
+    // Re-attach event listeners for location buttons
+    attachLocationEventListeners();
 }
 
 // Function to toggle layer visibility
@@ -501,6 +814,9 @@ if (infoHeader && layersSection && expandIcon) {
         }
     });
 }
+
+// Attach location event listeners initially
+attachLocationEventListeners();
 
 // Update layer toggles when layers change
 const originalSetProps = window.deckgl.setProps.bind(window.deckgl);

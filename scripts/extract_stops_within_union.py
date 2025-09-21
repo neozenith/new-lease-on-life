@@ -39,12 +39,14 @@ OUTPUT_STOPS_GEOJSON = SCRIPT_DIR.parent / "data/geojson/ptv/stops_within_union.
 OUTPUT_PTV_LINES_WITHIN_UNION = SCRIPT_DIR.parent / "data/geojson/ptv/lines_within_union.geojson"
 OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAM = SCRIPT_DIR.parent / "data/geojson/ptv/lines_within_union_metro_tram.geojson"
 OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAIN = SCRIPT_DIR.parent / "data/geojson/ptv/lines_within_union_metro_train.geojson"
+OUTPUT_PTV_LINES_WITHIN_UNION_REGIONAL_TRAIN = SCRIPT_DIR.parent / "data/geojson/ptv/lines_within_union_regional_train.geojson"
 
 ALL_OUTPUTS = [
     OUTPUT_STOPS_GEOJSON,
     OUTPUT_PTV_LINES_WITHIN_UNION,
     OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAM,
     OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAIN,
+    OUTPUT_PTV_LINES_WITHIN_UNION_REGIONAL_TRAIN,
 ]
 
 
@@ -104,7 +106,7 @@ def extract_stops_within_union():
 
     save_geodataframe(lines_intersecting, OUTPUT_PTV_LINES_WITHIN_UNION)
     save_geodataframe(lines_intersecting[lines_intersecting['MODE'] == "METRO TRAM"], OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAM)
-    save_geodataframe(lines_intersecting[lines_intersecting['MODE'] == "METRO TRAIN"], OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAIN)
+    save_geodataframe(lines_intersecting[lines_intersecting['MODE'].isin([ "METRO TRAIN"])], OUTPUT_PTV_LINES_WITHIN_UNION_METRO_TRAIN)
 
     log.info(f"Wrote {len(lines_intersecting)} lines to {OUTPUT_PTV_LINES_WITHIN_UNION}")
 
