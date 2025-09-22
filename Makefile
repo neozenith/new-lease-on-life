@@ -67,6 +67,8 @@ data/geojson/ptv/ptv_commute_tier_hulls_metro_train.geojson data/geojson/ptv/ptv
 data/geojson/ptv/boundaries/selected_postcodes_with_trams_trains.geojson \
 data/geojson/ptv/stops_with_commute_times_metro_train.geojson data/geojson/ptv/stops_with_commute_times_metro_tram.geojson: commuting_hulls
 
+data/geojson/ptv/lines_within_union_metro_tram.geojson data/geojson/ptv/lines_within_union_metro_train.geojson: ptv_stops_subset
+
 ##################################################
 # STATIC SITE DATA
 ##################################################
