@@ -172,14 +172,21 @@ window.deckgl = new DeckGL({
             html += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
             html += `Suburbs: ${props.suburbs}<br/>`;
         }
-        // Add stop name if available (for isochrones)
-        else if (props.stop_name) {
-            html += `<strong>${props.stop_name}</strong><br/>`;
-            if (props.stop_id) {
-                html += `Stop ID: ${props.stop_id}<br/>`;
+        // Add stop name if available (for isochrones and PTV stops)
+        else if (props.stop_name || props.STOP_NAME) {
+            html += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
+            if (props.stop_id || props.STOP_ID) {
+                html += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
             }
-            if (props.mode) {
-                html += `Mode: ${props.mode}<br/>`;
+            if (props.mode || props.MODE) {
+                html += `Mode: ${props.mode || props.MODE}<br/>`;
+            }
+            // Add transit metadata for stops
+            if (props.transit_time_minutes !== undefined) {
+                html += `Transit time: ${props.transit_time_minutes.toFixed(1)} min<br/>`;
+            }
+            if (props.transit_distance_km !== undefined) {
+                html += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
             }
             if (props.time_limit) {
                 html += `Time: ${props.time_limit} minutes<br/>`;
@@ -219,7 +226,7 @@ window.deckgl = new DeckGL({
 const selectedItems = new Map(); // Map to store selected items by type
 const maxSelectionsByType = {
     'real-estate-candidates': 2,
-    'postcodes': 2,
+    'postcodes': 2,  // Now supports up to 2 selections
     'ptv-stops-tram': 1,
     'ptv-stops-train': 1
 };
@@ -233,8 +240,9 @@ function getItemType(layer) {
         return 'real-estate-candidates';
     }
 
-    // Check for postcodes
-    if (layerId === 'selected_postcodes' || layerId === 'unioned_postcodes' ||
+    // Check for postcodes (matching the actual layer ID from config)
+    if (layerId === 'postcodes-with-trams-trains' ||
+        layerId === 'selected_postcodes' || layerId === 'unioned_postcodes' ||
         layerId === 'postcodes-selected' || layerId === 'postcodes-unioned') {
         return 'postcodes';
     }
@@ -389,6 +397,13 @@ function updateSelectionDisplay() {
                 html += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
                 if (props.stop_id || props.STOP_ID) {
                     html += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
+                }
+                // Display transit time and distance metadata
+                if (props.transit_time_minutes !== undefined) {
+                    html += `Transit time to Southern Cross: ${props.transit_time_minutes.toFixed(1)} minutes<br/>`;
+                }
+                if (props.transit_distance_km !== undefined) {
+                    html += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
                 }
                 if (props.routes || props.ROUTES) {
                     html += `Routes: ${props.routes || props.ROUTES}<br/>`;
