@@ -1,12 +1,29 @@
-- 1/618-620 Sydney Road, Coburg, Vic 3058
-- 2B Tassell Street, Hadfield, Vic 3046
+-   53 Waterford Avenue, Maribyrnong, Vic 3032:
+        link: https://www.realestate.com.au/property-house-vic-maribyrnong-428214586
+        rent: 625
+        bedrooms: 3
+        bathrooms: 1
+        parking: 2
 
-- 1/57 Jensen Road, Preston, Vic 3072
-- 3/42-44 Crevelli Street, Reservoir, Vic 3073
-- 1A Progress Street, Strathmore, Vic 3041
-- 38 David Crescent, Bundoora, Vic 3083
+        lat: -37.7724746
+        lon: 144.8795149
+        
+-   2A Kalang Rd, Glenroy, Vic 3046:
+        link: https://www.realestate.com.au/property-townhouse-vic-glenroy-442440684
 
-- 38 Hubert Ave, Glenroy, Vic 3046
-- 53 Waterford Avenue, Maribyrnong, Vic 3032
-- 2A Kalang Rd, Glenroy, Vic 3046
-- 1/4 Cochrane Ct, Essendon, Vic 3040
+        lat: -37.7100322
+        lon: 144.9220608
+
+-   1/4 Cochrane Ct, Essendon, Vic 3040:
+        link: https://www.realestate.com.au/property-townhouse-vic-essendon-442596936
+        rent: 680
+        bedrooms: 3
+        bathrooms: 1
+        parking: 2
+
+        lat: -37.7470524
+        lon: 144.9277315
+
+-   8 Poble Walk, Avondale Heights, Vic 3034:
+        lat: -37.7641157
+        lon: 144.8623721

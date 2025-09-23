@@ -31,10 +31,6 @@ Once this CSV file is created create a GeoJSON file where every record gets thei
 
 Ensure the output files are valid CSV and GeoJSON.
 
-### Load Static Layers
-
-I am migrating away from `isochrone_viewer.py` to `webapp/app.py`. I want to add dynamic controlled GeoJSON Layers which depending on a toggle control they are visible or not and this will be irrespective of the "Play" status of the existing animation code. In a separate task we will add the time animated data.
-
 ### Animate Deck.GL
 
 - Animate the Deck.GL visualisation with the historical rental and sales data
@@ -45,13 +41,11 @@ I am migrating away from `isochrone_viewer.py` to `webapp/app.py`. I want to add
     current timebucket shown in the Deck.gl component
 - All cross filtering by selecting a geoshape or a line in the line chart to filter the underlying data.
 
-### Deck.gl loading from a static URL
+### javascript load geoparquet
 
-- Test a deck.gl component loading geojson parquet from a URL. Hypotheses: I do not need an API server, just well laid out data chunks from statically hosted endpoints.
+load geoparquet via duckdb
+migrate all geojson static assets to geoparquet
 
-### DuckDB
-
-Replace local file caching with DuckDB or leverage DuckDB as a server to read the local parquet files and wrap a FastAPI around it to server the data urls to Deck.gl webapp
 
 ## More interesting datasets
 

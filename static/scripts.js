@@ -155,6 +155,22 @@ window.deckgl = new DeckGL({
         // Check if this is a real estate candidate (has address property)
         if (props.address) {
             html += `<strong>${props.address}</strong><br/>`;
+
+            // Show rent if available
+            if (props.rent) {
+                html += `<strong style="color: #2E7D32;">$${props.rent}/week</strong><br/>`;
+            }
+
+            // Show property features
+            const features = [];
+            if (props.bedrooms) features.push(`${props.bedrooms} bed`);
+            if (props.bathrooms) features.push(`${props.bathrooms} bath`);
+            if (props.parking) features.push(`${props.parking} car`);
+            if (features.length > 0) {
+                html += `${features.join(' · ')}<br/>`;
+            }
+
+            // Show walkability
             if (props.ptv_walkable_5min !== undefined) {
                 html += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes' : 'No'}<br/>`;
             }
@@ -337,6 +353,73 @@ function clearAllSelections() {
     updateLayerHighlights();
 }
 
+// Helper function to generate content for a single item
+function generateItemContent(type, props) {
+    let content = '';
+
+    const typeLabel = {
+        'real-estate-candidates': 'Real Estate Property',
+        'postcodes': 'Postcode',
+        'ptv-stops-tram': 'Tram Stop',
+        'ptv-stops-train': 'Train Station'
+    }[type] || type;
+
+    content += `<h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px; font-weight: bold;">${typeLabel}</h4>`;
+
+    if (type === 'real-estate-candidates') {
+        content += `<strong>${props.address}</strong><br/>`;
+
+        // Display rental details if available
+        if (props.rent) {
+            content += `<strong style="color: #2E7D32;">$${props.rent}/week</strong><br/>`;
+        }
+
+        // Display property features if available
+        const features = [];
+        if (props.bedrooms) features.push(`${props.bedrooms} bed`);
+        if (props.bathrooms) features.push(`${props.bathrooms} bath`);
+        if (props.parking) features.push(`${props.parking} car`);
+        if (features.length > 0) {
+            content += `${features.join(' · ')}<br/>`;
+        }
+
+        // Display walkability
+        if (props.ptv_walkable_5min !== undefined) {
+            content += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes ✓' : 'No ✗'}<br/>`;
+        }
+        if (props.ptv_walkable_15min !== undefined) {
+            content += `15-min walkable: ${props.ptv_walkable_15min ? 'Yes ✓' : 'No ✗'}<br/>`;
+        }
+
+        // Add link if available
+        if (props.link) {
+            content += `<a href="${props.link}" target="_blank" style="color: #1976D2; text-decoration: none; font-size: 12px;">View on realestate.com.au →</a><br/>`;
+        }
+    } else if (type === 'postcodes') {
+        content += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
+        if (props.suburbs) {
+            content += `Suburbs: ${props.suburbs}<br/>`;
+        }
+    } else if (type === 'ptv-stops-tram' || type === 'ptv-stops-train') {
+        content += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
+        if (props.stop_id || props.STOP_ID) {
+            content += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
+        }
+        // Display transit time and distance metadata
+        if (props.transit_time_minutes !== undefined) {
+            content += `Transit time to Southern Cross: ${props.transit_time_minutes.toFixed(1)} minutes<br/>`;
+        }
+        if (props.transit_distance_km !== undefined) {
+            content += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
+        }
+        if (props.routes || props.ROUTES) {
+            content += `Routes: ${props.routes || props.ROUTES}<br/>`;
+        }
+    }
+
+    return content;
+}
+
 // Update the selection panel display
 function updateSelectionDisplay() {
     const panel = document.getElementById('selection-panel');
@@ -364,8 +447,27 @@ function updateSelectionDisplay() {
         itemsByType.get(item.type).push(item);
     });
 
-    // Display items grouped by type
-    itemsByType.forEach((items, type) => {
+    // Check if we have exactly 2 items for side-by-side display
+    const totalItems = Array.from(selectedItems.values());
+    if (totalItems.length === 2) {
+        html += `<div style="display: flex; gap: 16px; height: 100%;">`;
+
+        totalItems.forEach((item, index) => {
+            const props = item.properties;
+            const type = item.type;
+
+            html += `<div style="flex: 1; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
+
+            // Add item content using the same logic as below
+            html += generateItemContent(type, props);
+
+            html += `</div>`;
+        });
+
+        html += `</div>`;
+    } else {
+        // Original display logic for non-2 item cases
+        itemsByType.forEach((items, type) => {
         const typeLabel = {
             'real-estate-candidates': 'Real Estate Properties',
             'postcodes': 'Postcodes',
@@ -380,41 +482,15 @@ function updateSelectionDisplay() {
             const props = item.properties;
             html += `<div style="margin-bottom: 12px; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
 
-            if (type === 'real-estate-candidates') {
-                html += `<strong>${props.address}</strong><br/>`;
-                if (props.ptv_walkable_5min !== undefined) {
-                    html += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes ✓' : 'No ✗'}<br/>`;
-                }
-                if (props.ptv_walkable_15min !== undefined) {
-                    html += `15-min walkable: ${props.ptv_walkable_15min ? 'Yes ✓' : 'No ✗'}<br/>`;
-                }
-            } else if (type === 'postcodes') {
-                html += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
-                if (props.suburbs) {
-                    html += `Suburbs: ${props.suburbs}<br/>`;
-                }
-            } else if (type === 'ptv-stops-tram' || type === 'ptv-stops-train') {
-                html += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
-                if (props.stop_id || props.STOP_ID) {
-                    html += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
-                }
-                // Display transit time and distance metadata
-                if (props.transit_time_minutes !== undefined) {
-                    html += `Transit time to Southern Cross: ${props.transit_time_minutes.toFixed(1)} minutes<br/>`;
-                }
-                if (props.transit_distance_km !== undefined) {
-                    html += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
-                }
-                if (props.routes || props.ROUTES) {
-                    html += `Routes: ${props.routes || props.ROUTES}<br/>`;
-                }
-            }
+            // Use the helper function to generate item content
+            html += generateItemContent(type, props);
 
             html += `</div>`;
         });
 
         html += `</div>`;
-    });
+        });
+    }
 
     content.innerHTML = html;
 }

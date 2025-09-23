@@ -38,7 +38,7 @@ jobs:
         with:
           python-version-file: .python-version
       - name: Process Real Estate Candidates YAML into Geocoded GeoJSON
-        run: uv run scripts/process_realestate_candidates.py
+        run: uv run scripts/geocode_candidates.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

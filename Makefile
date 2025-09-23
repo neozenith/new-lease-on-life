@@ -1,6 +1,6 @@
 .PHONY: fix_geojson scrape_isochrones all consolidate_isochrones migrate_geojson_geoparquet rentals \
 		aux_data isochrones state_polygons polygons_by_state fix convert_shp_files \
-		postcode_polygons_subset ptv_stops_subset commuting_hulls
+		postcode_polygons_subset ptv_stops_subset commuting_hulls site site_data
 
 ######### SUPPORT FILES #########
 convert_shp_files:
@@ -28,7 +28,7 @@ scrape_isochrones:
 	time uv run scripts/batch_isochrones_for_stops.py --status
 
 rentals: consolidate_isochrones
-	time uv run scripts/process_realestate_candidates.py
+	time uv run scripts/geocode_candidates.py
 
 ######### DATA TIDY UP #########
 fix_geojson: scrape_isochrones
@@ -95,10 +95,10 @@ static/data/stops_with_commute_times_metro_train.geojson: data/geojson/ptv/stops
 static/data/stops_with_commute_times_metro_tram.geojson: data/geojson/ptv/stops_with_commute_times_metro_tram.geojson
 	cp $< $@
 
-static_site: static/data/5.geojson static/data/15.geojson static/data/all_candidates.geojson \
+site_data: static/data/5.geojson static/data/15.geojson static/data/all_candidates.geojson \
 	static/data/lines_within_union_metro_tram.geojson static/data/lines_within_union_metro_train.geojson \
 	static/data/ptv_commute_tier_hulls_metro_train.geojson static/data/ptv_commute_tier_hulls_metro_tram.geojson \
 	static/data/selected_postcodes_with_trams_trains.geojson \
 	static/data/stops_with_commute_times_metro_train.geojson static/data/stops_with_commute_times_metro_tram.geojson
-	
+site: site_data	
 	uv run -m http.server --directory static/ 8002
