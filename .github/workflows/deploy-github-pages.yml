@@ -6,7 +6,7 @@ on:
     branches: ["main"]
     paths:
       - 'candidates.yml'
-      - 'static/**'
+      - 'sites/webapp/**'
       - 'scripts/process_realestate_candidates.py'
       - '.github/workflows/deploy-github-pages.yml'
 
@@ -43,7 +43,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           # Upload static folder
-          path: './static'
+          path: './sites/webapp/'
 
   # Deployment job
   deploy:

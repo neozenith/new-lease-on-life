@@ -28,11 +28,11 @@ from utils import dirty, save_geodataframe
 log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
+FIXED_ISOCHRONES_DIR = SCRIPT_DIR.parent / "data/isochrones_geojson_fixed/"
 
-
-ISOCHRONE_FOOT = SCRIPT_DIR.parent / "data/geojson_fixed/foot/"
-ISOCHRONE_BIKE = SCRIPT_DIR.parent / "data/geojson_fixed/bike/"
-ISOCHRONE_CAR = SCRIPT_DIR.parent / "data/geojson_fixed/car/"
+ISOCHRONE_FOOT = FIXED_ISOCHRONES_DIR / "foot/"
+ISOCHRONE_BIKE = FIXED_ISOCHRONES_DIR / "bike/"
+ISOCHRONE_CAR = FIXED_ISOCHRONES_DIR / "car/"
 MODES = {"car": ISOCHRONE_CAR, "bike": ISOCHRONE_BIKE, "foot": ISOCHRONE_FOOT}
 ISOCHRONE_TIERS = ["15", "10", "5"]
 OUTPUT_DIR = SCRIPT_DIR.parent / "data/isochrones_concatenated"

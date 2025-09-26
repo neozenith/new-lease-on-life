@@ -57,6 +57,7 @@
 **Real Problems Found**: 2 actual runtime failures identified out of 10+ potential issues examined.
 
 **False Positives Rejected**:
+
 - Import stub warnings (geopandas, pandas, etc.) - Scripts work fine, just IDE noise
 - Hardcoded API endpoints - Haven't changed in years, would take more time to "fix" than they save  
 - Code duplication across scripts - Each script works independently, premature abstraction would add complexity
@@ -71,6 +72,7 @@
 **Business Impact**: Without these fixes, property analysis functionality crashes and state polygon extraction could fail in optimized Python environments. The Medium priority items affect robustness but don't cause failures in normal operation.
 
 **Architectural Decisions That Are Fine**:
+
 - Each script is standalone with its own imports - this is intentional for uv+PEP-723 scripts
 - Scripts hardcode data paths relative to project - this is appropriate for project-specific tooling
 - Mix of pandas/geopandas APIs - geospatial scripts legitimately need both

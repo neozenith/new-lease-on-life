@@ -29,6 +29,10 @@ POSTCODE_POLYGONS = (
     SCRIPT_DIR.parent
     / "data/originals_converted/boundaries/POA_2021_AUST_GDA2020_SHP/POA_2021_AUST_GDA2020.parquet"
 )
+LGA_POLYGONS = (
+    SCRIPT_DIR.parent
+    / "data/originals_converted/boundaries/LGA_2021_AUST_GDA2020_SHP/LGA_2021_AUST_GDA2020.parquet"
+)
 
 BOUNDARIES_BASE = SCRIPT_DIR.parent / "data/originals_converted/boundaries"
 BOUNDARIES = BOUNDARIES_BASE.rglob("**/*.parquet")
@@ -98,6 +102,9 @@ def extract_postcode_polygons():
     log.info(json.dumps(suburbs_by_postcode, indent=2))
     
     postcode_boundaries["suburbs"] = postcode_boundaries["POA_CODE21"].map(suburbs_by_postcode)
+    subset_postcodes = postcode_boundaries[~postcode_boundaries["suburbs"].isna()].copy()
+    subset_postcodes = subset_postcodes.drop_duplicates(subset=["POA_CODE21"], keep="first")
+    subset_postcodes_unioned = gpd.GeoDataFrame(geometry=[subset_postcodes.geometry.union_all()], crs=subset_postcodes.crs)
 
 
     gdf_stops = gpd.read_parquet(STOPS_GEOJSON)
@@ -120,12 +127,16 @@ def extract_postcode_polygons():
                 f"Loading input file: {input_file} {pathlib.Path(input_file).stat().st_size / 1024 / 1024:.2f} MB"
             )
             gdf_input = gpd.read_parquet(input_file)
-            gdf_polygons = filter_for_target(target, gdf_input, gdf_stops_trams_trains)
+            gdf_polygons = filter_for_target(target, gdf_input, subset_postcodes_unioned)
         
         if target.startswith("postcodes"):
             gdf_polygons["suburbs"] = gdf_polygons["POA_CODE21"].map(suburbs_by_postcode)
             gdf_polygons = gdf_polygons[~gdf_polygons["suburbs"].isna()].copy()
             gdf_polygons = gdf_polygons.drop_duplicates(subset=["POA_CODE21"], keep="first")
+        if "lga" in target:
+            gdf_polygons = gdf_polygons.drop_duplicates(subset=["LGA_CODE24"], keep="first")
+        if "sa2" in target:
+            gdf_polygons = gdf_polygons.drop_duplicates(subset=["SA2_CODE21"], keep="first")
 
         gdf = gdf_polygons.copy()
         unioned_geom = gdf.geometry.union_all()

@@ -19,12 +19,11 @@ import logging
 from pathlib import Path
 
 import geopandas as gpd
-from dotenv import load_dotenv
 from tqdm import tqdm
 from utils import dirty, unzip_archive
 
-# Load environment variables from .env file
-load_dotenv()
+
+_file_size = lambda p: f"{p.stat().st_size / 1024 / 1024:.2f}Mb"
 
 log = logging.getLogger(__name__)
 
@@ -35,37 +34,14 @@ OUTPUT_DIR = SCRIPT_DIR.parent / "data/originals_converted/"
 
 BOUNDARY_DIR = DATA_DIR / "boundaries"
 
-
-def find_shapefiles(data_dir: Path) -> list[Path]:
-    """
-    Find all .shp files in the data directory and its subdirectories.
-
-    Args:
-        data_dir: Path to the data directory
-
-    Returns:
-        List of paths to shapefiles
-    """
-    log.info(f"Searching for shapefiles in {data_dir}")
-
-    # Find all .shp files in the data directory and its subdirectories
-    shapefiles = list(data_dir.glob("**/*.shp"))
-
-    # Log the results
-    if shapefiles:
-        for shp in shapefiles:
-            log.info(f"Found shapefile: {shp} {shp.stat().st_size / 1024 / 1024:.2f}Mb")
-    else:
-        log.warning(f"No shapefiles found in {data_dir} or its subdirectories")
-
-    return shapefiles
-
+ALL_INPUTS = [BOUNDARY_DIR]
+ALL_OUTPUTS = [OUTPUT_DIR]
 
 def export_shapefile_to_geojson(
     shapefile_path: Path,
     output_dir: Path,
     simplify_tolerance: float | None = None,
-    filter_columns: list[str] | None = None,
+    force: bool = False,
 ) -> Path:
     """
     Export a shapefile to GeoJSON.
@@ -74,7 +50,6 @@ def export_shapefile_to_geojson(
         shapefile_path: Path to the shapefile
         output_dir: Directory to save the GeoJSON file
         simplify_tolerance: Tolerance for geometry simplification (in degrees)
-        filter_columns: Columns to keep in the output (all if None)
 
     Returns:
         Path to the exported GeoJSON file
@@ -88,16 +63,16 @@ def export_shapefile_to_geojson(
         output_file = output_dir / relative_shapefile_path / f"{shapefile_path.stem}.geojson"
 
         # Guard condition to skip if up to date
-        if not dirty(output_file, shapefile_path):
+        if not dirty(output_file, shapefile_path) and not force:
             log.info(
-                f"Found shapefile: {shapefile_path} {shapefile_path.stat().st_size / 1024 / 1024:.2f}Mb"
+                f"Found shapefile: {relative_shapefile_path} {_file_size(shapefile_path)}"
             )
             log.info(
-                f"Found existing up-to-date output_file: {output_file} {output_file.stat().st_size / 1024 / 1024:.2f}Mb"
+                f"Found existing up-to-date output_file: {output_file.relative_to(OUTPUT_DIR)} {_file_size(output_file)}"
             )
             geoparquet_path = output_file.with_suffix(".parquet")
             log.info(
-                f"Found existing up-to-date geoparquet_file: {geoparquet_path} {geoparquet_path.stat().st_size / 1024 / 1024:.2f}Mb"
+                f"Found existing up-to-date geoparquet_file: {geoparquet_path.relative_to(OUTPUT_DIR)} {_file_size(geoparquet_path)}"
             )
 
             return output_file
@@ -126,18 +101,6 @@ def export_shapefile_to_geojson(
             reduction = (original_size - new_size) / original_size * 100
             log.info(f"Simplification reduced size by approximately {reduction:.2f}%")
 
-        # Filter columns if requested
-        if filter_columns:
-            available_columns = set(gdf.columns)
-            requested_columns = set(filter_columns + ["geometry"])  # Always keep geometry
-            valid_columns = list(available_columns.intersection(requested_columns))
-
-            if valid_columns:
-                log.info(f"Filtering to columns: {valid_columns}")
-                gdf = gdf[valid_columns]
-            else:
-                log.warning("No requested columns found in dataset, keeping all columns")
-
         # Export to GeoJSON
         log.info(f"Exporting to GeoJSON: {output_file}")
         output_file.parent.mkdir(parents=True, exist_ok=True)  # Ensure parent directory exists
@@ -156,7 +119,7 @@ def process_shapefiles(
     data_dir: Path = DATA_DIR,
     output_dir: Path = OUTPUT_DIR,
     simplify_tolerance: float | None = None,
-    filter_by_suffix: str | None = None,
+    force: bool = False,
 ) -> list[Path]:
     """
     Process all shapefiles in the data directory and export them to GeoJSON.
@@ -165,18 +128,13 @@ def process_shapefiles(
         data_dir: Path to the data directory
         output_dir: Directory to save the GeoJSON files
         simplify_tolerance: Tolerance for geometry simplification (in degrees)
-        filter_by_suffix: Only process files with this suffix
 
     Returns:
         List of paths to exported GeoJSON files
     """
     # Find all shapefiles
-    shapefiles = find_shapefiles(data_dir)
+    shapefiles = list(data_dir.glob("**/*.shp"))
 
-    # Filter by suffix if requested
-    if filter_by_suffix:
-        shapefiles = [shp for shp in shapefiles if shp.name.endswith(filter_by_suffix)]
-        log.info(f"Filtered to {len(shapefiles)} shapefiles ending with '{filter_by_suffix}'")
 
     if not shapefiles:
         log.warning("No shapefiles to process")
@@ -187,7 +145,7 @@ def process_shapefiles(
     # Process each shapefile with a progress bar
     for shapefile in tqdm(shapefiles, desc="Exporting shapefiles"):
         try:
-            geojson_path = export_shapefile_to_geojson(shapefile, output_dir, simplify_tolerance)
+            geojson_path = export_shapefile_to_geojson(shapefile, output_dir, simplify_tolerance, force)
             exported_files.append(geojson_path)
         except Exception as e:
             log.error(f"Failed to export {shapefile}: {e}")
@@ -212,29 +170,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--simplify", type=float, help="Tolerance for geometry simplification (in degrees)"
     )
-    parser.add_argument("--filter-suffix", type=str, help="Only process files with this suffix")
-    parser.add_argument("--single-file", type=str, help="Process only this specific shapefile")
+    parser.add_argument("--force", action="store_true", help="Force re-exporting all shapefiles")
 
     args = parser.parse_args()
 
     # Create output directory if it doesn't exist
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    ZIP_FILES = list(BOUNDARY_DIR.glob("*.zip"))
-    print(f"Found {len(ZIP_FILES)} zip files in {BOUNDARY_DIR} {ZIP_FILES=}")
+    # If there are any zip files in the source directory, unzip them first
+    ZIP_FILES = list(args.data_dir.glob("*.zip"))
+    log.info(f"Found {len(ZIP_FILES)} zip files in {args.data_dir} {ZIP_FILES=}")
     for zip_file in tqdm(ZIP_FILES, desc="Unzipping archives"):
         unzip_archive(zip_file)
 
-    if args.single_file:
-        # Process a single file
-        single_file_path = Path(args.single_file)
-        if not single_file_path.exists():
-            log.error(f"Shapefile not found: {args.single_file}")
-        else:
-            try:
-                export_shapefile_to_geojson(single_file_path, args.output_dir, args.simplify)
-            except Exception as e:
-                log.error(f"Error processing file: {e}")
-    else:
-        # Process all files
-        process_shapefiles(args.data_dir, args.output_dir, args.simplify, args.filter_suffix)
+
+    process_shapefiles(args.data_dir, args.output_dir, args.simplify, args.force)

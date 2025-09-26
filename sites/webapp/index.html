@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Josh is Finding a Rental in Melbourne</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏘️</text></svg>">
+
+
+    <!-- DeckGL CDN -->
+    <script src="https://unpkg.com/deck.gl@latest/dist.min.js"></script>
+
+    <!-- MapLibre GL JS for base map -->
+    <script src="https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <!-- Plotly.js for charts -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- DuckDB WASM -->
+    <script type="module">
+        import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@latest/+esm';
+        window.duckdb = duckdb;
+    </script>
+
+    <style>
+        body {
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .deck-tooltip {
+            position: absolute;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            max-width: 300px;
+            font-size: 12px;
+            z-index: 9;
+            pointer-events: none;
+            border-radius: 4px;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1;
+        }
+
+        #info h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #info p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        #layers-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        #layers-section.expanded {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 4px 0;
+            font-size: 12px;
+        }
+
+        .layer-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .layer-item label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .expand-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        #layers-divider {
+            height: 1px;
+            background: #e0e0e0;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+
+    <div id="info">
+        <h3 id="info-header">
+            Layer Options
+            <span class="expand-icon" id="expand-icon">▶</span>
+        </h3>
+        <p style="margin-bottom: 4px;">Victoria transit accessibility</p>
+        <p style="font-size: 11px; margin-top: 4px; line-height: 1.4;">
+            <span style="color: #00C864;">■ 5min</span> ·
+            <span style="color: #0096C8;">■ 15min</span><br/>
+            <span style="color: #32C832;">─ Metro Train</span> ·
+            <span style="color: #FF9632;">─ Metro Tram</span>
+        </p>
+        <div id="layers-divider"></div>
+        <div id="layers-section">
+            <!-- Layer toggles will be populated by JavaScript -->
+            <div id="location-control" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                <button id="get-location-btn" style="
+                    padding: 10px 16px;
+                    background: #f5f5f5;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                    justify-content: center;
+                ">
+                    <span style="font-size: 16px;">📍</span>
+                    <span>Show My Location</span>
+                </button>
+                <button id="center-location-btn" style="
+                    margin-top: 8px;
+                    padding: 10px 16px;
+                    background: #f5f5f5;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    display: none;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                    justify-content: center;
+                ">
+                    <span style="font-size: 16px;">🎯</span>
+                    <span>Center on Location</span>
+                </button>
+                <div id="location-status" style="
+                    margin-top: 8px;
+                    padding: 8px 12px;
+                    background: #f9f9f9;
+                    border-radius: 4px;
+                    border: 1px solid #e0e0e0;
+                    font-size: 12px;
+                    display: none;
+                "></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selection Information Panel -->
+    <div id="selection-panel" style="
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 0;
+        background: white;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        transition: height 0.3s ease;
+        z-index: 10;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    ">
+        <div style="
+            padding: 12px 16px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        ">
+            <h3 style="margin: 0; font-size: 16px;">Selected Items</h3>
+            <button id="close-selection-panel" style="
+                background: none;
+                border: none;
+                font-size: 20px;
+                cursor: pointer;
+                padding: 4px 8px;
+            ">×</button>
+        </div>
+        <div id="selection-content" style="
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        ">
+            <!-- Selected items will be displayed here -->
+        </div>
+    </div>
+
+    <!-- Load geospatial mappings first -->
+    <script src="./geospatial_mappings.js"></script>
+    <!-- Load the external JavaScript file -->
+    <script src="./scripts.js?v=9"></script>
+</body>
+</html>

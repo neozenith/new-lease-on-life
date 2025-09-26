@@ -2,13 +2,12 @@
 
 ## Features and Bugs
 
-
 ### Rental and Sales Data
 
 Leverage as many create-helper-scripts subagents as need be.
 
 Create a new python script under `scripts/` that will extract the data out of `data/originals/rental/*.xslx` and `data/originals/sales/*.xslx` and save the results into their respective folders under `data/originals_converted/`.
-These excel files contain the median renta
+These excel files contain the median rental and sales data by suburb or postcode or lga
 
 I want all the data consolidated into one file in csv in tall format (not wide format), where there is a column for:
 
@@ -45,7 +44,6 @@ Ensure the output files are valid CSV and GeoJSON.
 
 load geoparquet via duckdb
 migrate all geojson static assets to geoparquet
-
 
 ## More interesting datasets
 

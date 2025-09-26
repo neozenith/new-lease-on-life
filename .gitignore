@@ -56,3 +56,8 @@ data/
 !static/data/
 !static/data/*.geojson
 # !static/data/*.parquet
+
+!sites/webapp/data/
+!sites/webapp/data/*.geojson
+
+tmp/

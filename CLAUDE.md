@@ -16,6 +16,7 @@ This project provides tools for geocoding addresses and calculating isochrones u
 ## Current Architecture
 
 **Core Components**:
+
 - **Data Pipeline**: Extract → Transform → Load (ETL) for geospatial data
 - **API Integration**: GraphHopper geocoding and isochrone services
 - **File Storage**: GeoJSON and GeoParquet files for geospatial data
@@ -29,6 +30,7 @@ Postcodes + Transport Stops → Isochrone API → GeoJSON/GeoParquet Files → P
 ```
 
 **⚠️ Current Implementation Notes**:
+
 - **DuckDB Integration**: Configured in dependencies but NOT currently implemented in data processing
 - **Data Storage**: Currently using direct file I/O with GeoJSON and GeoParquet formats
 - **Visualization**: PyDeck loads files directly and serves DeckGL.js through HoloViz Panel
@@ -41,6 +43,7 @@ Postcodes + Transport Stops → Isochrone API → GeoJSON/GeoParquet Files → P
 **Code Quality**: `ruff` for formatting and linting  
 
 **Dependencies**:
+
 - **Core**: `duckdb`, `duckdb-extensions`, `duckdb-extension-spatial` *(not yet implemented)*
 - **Geospatial**: `geopandas`, `shapely`, `pyogrio`, `fiona`
 - **Visualization**: `panel`, `pydeck`, `holoviews`, `bokeh`
@@ -69,6 +72,7 @@ uv run <script.py>    # Run individual scripts with dependencies
 ```
 
 **Key Scripts**:
+
 - `isochrone_viewer.py` - Interactive web visualization
 - `batch_isochrones_for_stops.py` - API data fetching
 - `extract_postcode_polygons.py` - Postcode boundary processing
@@ -97,6 +101,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ```
 
 **Project Settings**:
+
 - Line length: 100 characters
 - Python target: 3.12
 - Quote style: double quotes
@@ -111,10 +116,12 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ## Data Sources
 
 **Primary APIs**:
+
 - GraphHopper Geocoding API
 - GraphHopper Isochrone API
 
 **Victorian Government Open Data**:
+
 - Public transport stops and routes
 - Postcode boundaries  
 - Property and demographic data (property sales reports)
@@ -123,6 +130,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ## Production Concerns & Architecture Questions
 
 **Current Limitations**:
+
 - File-based data serving (not scalable for production)
 - No spatial database queries (missing DuckDB implementation)
 - Direct file loading into frontend (no API layer)
@@ -130,6 +138,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 - Single-user local application (not multi-user ready)
 
 **Architecture Analysis Needed**:
+
 1. **Geospatial API Design**: How to effectively serve large geospatial datasets via REST/GraphQL API
 2. **Database Integration**: Complete DuckDB spatial extension implementation vs alternatives
 3. **Caching Strategy**: Spatial query caching, tile caching, isochrone result caching
@@ -140,6 +149,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ## Claude Code Integration Notes
 
 **Recommended Personas**:  
+
 - `--persona-analyzer` for data architecture analysis
 - `--persona-architect` for production architecture planning
 - `--persona-performance` for geospatial optimization
@@ -147,6 +157,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 - `--persona-frontend` for visualization improvements
 
 **Common Operations**:
+
 - Geospatial data processing and analysis
 - API integration and error handling
 - Interactive visualization development
@@ -154,12 +165,14 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 - Production architecture planning
 
 **Development Workflow**:
+
 1. Use `make fix` for code formatting before commits
 2. Test individual scripts with `uv run <script.py>`
 3. Use complete pipeline with `make all`
 4. Monitor API usage and caching for efficiency
 
 **Priority Analysis Areas**:
+
 - Database integration strategy (DuckDB vs PostGIS vs alternatives)
 - API architecture for geospatial data serving
 - Frontend/backend decoupling for production deployment
@@ -168,6 +181,7 @@ MAPBOX_API_TOKEN=your_mapbox_api_token_here
 ## Future Work & Technical Exploration
 
 **Other Technical Explorations**:
+
 - Integration with Victorian property data for enhanced analysis
 - Vector tile serving for efficient data delivery
 - Progressive web app capabilities for offline usage
