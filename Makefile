@@ -81,28 +81,8 @@ isochrones: aux_data consolidate_isochrones
 rentals: consolidate_isochrones
 	time uv run scripts/geocode_candidates.py
 
-# Discover data structure first
-discover_rental_sales:
-	@echo "Discovering rental and sales data structure..."
-	uv run scripts/discover_rental_sales_data.py
-	@echo "Discovery complete. See specs/rental-sales-data-catalog.md"
-
-# Main processing - transform Excel to CSV and GeoJSON
-rental_sales_extract: discover_rental_sales
-	uv run scripts/process_rental_sales_excel.py
-
-rental_sales: rental_sales_extract
-	uv run scripts/generate_rental_sales_geojson.py
-
-# Convert rental sales CSV to DuckDB for web application
-rental_sales_duckdb: rental_sales_extract
-	uv run scripts/convert_rental_sales_to_duckdb.py
-
-# Clean generated outputs
-clean_rental_sales:
-	rm -rf data/processed/rental_sales/
-	rm -rf tmp/claude_cache/*
-
+rental_sales:
+	uv run scripts/rental_sales/extract.py
 
 ##################################################
 # MAPPING STATIC SITE DATA TO SOURCE JOBS

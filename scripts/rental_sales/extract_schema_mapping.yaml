@@ -1,0 +1,88 @@
+rentals:
+
+  - file: 'data/originals/rental/Moving annual rent by suburb - December quarter 2024.xlsx'
+    data_frequency: quarterly # Moving annual by quarter
+    data_granularity: suburb
+    time_bucket_format: 'MMM YYYY'
+    sheets:
+      - sheet: '1 bedroom flat'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: '2 bedroom flat'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: '3 bedroom flat'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: '2 bedroom house'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: '3 bedroom house'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: '4 bedroom house'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+      - sheet: 'All properties'
+        time_bucket_range: C2:GT2
+        statistic: 
+          type: [count, median] # Alternating columns of count and median for the given range
+          range: C3:GT3
+        geospatial_range: B4:B161
+
+  - file: 'data/originals/rental/Quarterly median rents by Local Government Area - December quarter 2024.xlsx'
+    data_frequency: quarterly
+    data_granularity: lga
+    sheets:
+      - sheet: '1br Flat'
+      - sheet: '2br Flat'
+      - sheet: '3br Flat'
+      - sheet: '2br House'
+      - sheet: '3br House'
+      - sheet: '4br House'
+      - sheet: 'All Properties'
+
+
+sales:
+
+  - file: 'data/originals/sales/Houses-by-suburb-2013-2023.xlsx'
+    data_frequency: annual
+    data_granularity: suburb
+    sheets:
+      - sheet: 'Table 1'
+        time_bucket_range: B2:L2
+        geospatial_range: A3:A791
+
+  - file: 'data/originals/sales/Units-by-suburb-2013-2023.xlsx'
+    data_frequency: annual
+    data_granularity: suburb
+    sheets:
+      - sheet: 'Table 1'
+        time_bucket_range: B2:L2
+        geospatial_range: A3:A446
+
+  - file: 'data/originals/sales/Vacant-Land-by-suburb-2013-2023.xlsx'
+    data_frequency: annual
+    data_granularity: suburb
+    sheets:
+      - sheet: 'Table 1'
+        time_bucket_range: B2:L2
+        geospatial_range: A3:A218

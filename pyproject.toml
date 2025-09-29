@@ -105,6 +105,12 @@ exclude = [
 ]
 respect-gitignore = true
 
+[dependency-groups]
+dev = [
+    "playwright>=1.53.0",
+    "pytest-playwright>=0.7.1",
+]
+
 # Rule-specific configurations (uncomment and modify as needed)
 
 # [tool.rumdl.MD003]

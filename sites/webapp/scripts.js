@@ -983,7 +983,8 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
 
 // Helper function to generate content for a single item
 function generateItemContent(type, props, includeChart = false, chartContainerId = null) {
-    let content = '';
+    let dataContent = '';
+    let chartContent = '';
 
     const typeLabel = {
         'real-estate-candidates': 'Real Estate Property',
@@ -994,14 +995,14 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
         'ptv-stops-train': 'Train Station'
     }[type] || type;
 
-    content += `<h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px; font-weight: bold;">${typeLabel}</h4>`;
+    dataContent += `<h4 style="margin: 0 0 8px 0; color: #333; font-size: 14px; font-weight: bold;">${typeLabel}</h4>`;
 
     if (type === 'real-estate-candidates') {
-        content += `<strong>${props.address}</strong><br/>`;
+        dataContent += `<strong>${props.address}</strong><br/>`;
 
         // Display rental details if available
         if (props.rent) {
-            content += `<strong style="color: #2E7D32;">$${props.rent}/week</strong><br/>`;
+            dataContent += `<strong style="color: #2E7D32;">$${props.rent}/week</strong><br/>`;
         }
 
         // Display property features if available
@@ -1010,93 +1011,94 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
         if (props.bathrooms) features.push(`${props.bathrooms} bath`);
         if (props.parking) features.push(`${props.parking} car`);
         if (features.length > 0) {
-            content += `${features.join(' · ')}<br/>`;
+            dataContent += `${features.join(' · ')}<br/>`;
         }
 
         // Display walkability
         if (props.ptv_walkable_5min !== undefined) {
-            content += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes ✓' : 'No ✗'}<br/>`;
+            dataContent += `5-min walkable: ${props.ptv_walkable_5min ? 'Yes ✓' : 'No ✗'}<br/>`;
         }
         if (props.ptv_walkable_15min !== undefined) {
-            content += `15-min walkable: ${props.ptv_walkable_15min ? 'Yes ✓' : 'No ✗'}<br/>`;
+            dataContent += `15-min walkable: ${props.ptv_walkable_15min ? 'Yes ✓' : 'No ✗'}<br/>`;
         }
 
         // Add link if available
         if (props.link) {
-            content += `<a href="${props.link}" target="_blank" style="color: #1976D2; text-decoration: none; font-size: 12px;">View on realestate.com.au →</a><br/>`;
+            dataContent += `<a href="${props.link}" target="_blank" style="color: #1976D2; text-decoration: none; font-size: 12px;">View on realestate.com.au →</a><br/>`;
         }
     } else if (type === 'postcodes') {
-        content += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
+        dataContent += `<strong>Postcode: ${props.POA_NAME21}</strong><br/>`;
         if (props.suburbs) {
-            content += `Suburbs: ${props.suburbs}<br/>`;
+            dataContent += `Suburbs: ${props.suburbs}<br/>`;
         }
 
-        // Add chart for postcode if requested
+        // Create chart content separately
         if (includeChart && chartContainerId) {
-            content += `<div id="${chartContainerId}" style="margin-top: 12px; height: 250px; width: 100%;"></div>`;
+            chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
             // Create the chart after the DOM is updated
             setTimeout(() => createAreaChart(chartContainerId, 'SUBURB', props.POA_NAME21, 'rent'), 200);
         }
     } else if (type === 'lga') {
-        content += `<strong>LGA: ${props.LGA_NAME24}</strong><br/>`;
+        dataContent += `<strong>LGA: ${props.LGA_NAME24}</strong><br/>`;
         if (props.STE_NAME21) {
-            content += `State: ${props.STE_NAME21}<br/>`;
+            dataContent += `State: ${props.STE_NAME21}<br/>`;
         }
         if (props.AREASQKM) {
-            content += `Area: ${Number(props.AREASQKM).toFixed(1)} km²<br/>`;
+            dataContent += `Area: ${Number(props.AREASQKM).toFixed(1)} km²<br/>`;
         }
         if (props.LGA_CODE24) {
-            content += `Code: ${props.LGA_CODE24}<br/>`;
+            dataContent += `Code: ${props.LGA_CODE24}<br/>`;
         }
 
-        // Add chart for LGA if requested
+        // Create chart content separately
         if (includeChart && chartContainerId) {
-            content += `<div id="${chartContainerId}" style="margin-top: 12px; height: 250px; width: 100%;"></div>`;
+            chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
             // Create the chart after the DOM is updated
             setTimeout(() => createAreaChart(chartContainerId, 'LGA', props.LGA_NAME24, 'rent'), 200);
         }
     } else if (type === 'sa2') {
-        content += `<strong>SA2: ${props.SA2_NAME21}</strong><br/>`;
+        dataContent += `<strong>SA2: ${props.SA2_NAME21}</strong><br/>`;
         if (props.STE_NAME21) {
-            content += `State: ${props.STE_NAME21}<br/>`;
+            dataContent += `State: ${props.STE_NAME21}<br/>`;
         }
         if (props.AREASQKM21) {
-            content += `Area: ${Number(props.AREASQKM21).toFixed(1)} km²<br/>`;
+            dataContent += `Area: ${Number(props.AREASQKM21).toFixed(1)} km²<br/>`;
         }
         if (props.SA2_CODE21) {
-            content += `Code: ${props.SA2_CODE21}<br/>`;
+            dataContent += `Code: ${props.SA2_CODE21}<br/>`;
         }
         if (props.SA3_NAME21) {
-            content += `SA3: ${props.SA3_NAME21}<br/>`;
+            dataContent += `SA3: ${props.SA3_NAME21}<br/>`;
         }
         if (props.SA4_NAME21) {
-            content += `SA4: ${props.SA4_NAME21}<br/>`;
+            dataContent += `SA4: ${props.SA4_NAME21}<br/>`;
         }
 
-        // Add chart for SA2 if requested
+        // Create chart content separately
         if (includeChart && chartContainerId) {
-            content += `<div id="${chartContainerId}" style="margin-top: 12px; height: 250px; width: 100%;"></div>`;
+            chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
             // Create the chart after the DOM is updated
             setTimeout(() => createAreaChart(chartContainerId, 'SA2', props.SA2_NAME21, 'rent'), 200);
         }
     } else if (type === 'ptv-stops-tram' || type === 'ptv-stops-train') {
-        content += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
+        dataContent += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
         if (props.stop_id || props.STOP_ID) {
-            content += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
+            dataContent += `Stop ID: ${props.stop_id || props.STOP_ID}<br/>`;
         }
         // Display transit time and distance metadata
         if (props.transit_time_minutes !== undefined) {
-            content += `Transit time to Southern Cross: ${props.transit_time_minutes.toFixed(1)} minutes<br/>`;
+            dataContent += `Transit time to Southern Cross: ${props.transit_time_minutes.toFixed(1)} minutes<br/>`;
         }
         if (props.transit_distance_km !== undefined) {
-            content += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
+            dataContent += `Transit distance: ${props.transit_distance_km.toFixed(2)} km<br/>`;
         }
         if (props.routes || props.ROUTES) {
-            content += `Routes: ${props.routes || props.ROUTES}<br/>`;
+            dataContent += `Routes: ${props.routes || props.ROUTES}<br/>`;
         }
     }
 
-    return content;
+    // Return both data and chart content separately
+    return { dataContent, chartContent };
 }
 
 // Update the selection panel display
@@ -1135,7 +1137,7 @@ function updateSelectionDisplay() {
             const props = item.properties;
             const type = item.type;
 
-            html += `<div style="flex: 1; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
+            html += `<div style="flex: 1; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF; overflow: hidden;">`;
 
             // For postcodes, LGAs, and SA2s, include charts when there are 1-2 selected
             const shouldIncludeChart = (type === 'postcodes' || type === 'lga' || type === 'sa2') && (totalItems.length === 1 || totalItems.length === 2);
@@ -1146,7 +1148,24 @@ function updateSelectionDisplay() {
                 chartContainerId = `chart-${type}-${identifier}-${index}`;
             }
 
-            html += generateItemContent(type, props, shouldIncludeChart, chartContainerId);
+            const { dataContent, chartContent } = generateItemContent(type, props, shouldIncludeChart, chartContainerId);
+
+            if (shouldIncludeChart && chartContent) {
+                // Two column layout: 2/3 for chart, 1/3 for data
+                html += `
+                    <div style="display: flex; gap: 12px; height: 100%;">
+                        <div style="flex: 2; min-width: 0;">
+                            ${chartContent}
+                        </div>
+                        <div style="flex: 1; min-width: 0; overflow-y: auto;">
+                            ${dataContent}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Just data content without chart
+                html += dataContent;
+            }
 
             html += `</div>`;
         });
@@ -1158,12 +1177,24 @@ function updateSelectionDisplay() {
         const props = item.properties;
         const type = item.type;
 
-        html += `<div style="padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
+        html += `<div style="padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF; overflow: hidden; height: 100%;">`;
 
         const identifier = type === 'postcodes' ? props.POA_NAME21 :
                           type === 'sa2' ? props.SA2_NAME21 : props.LGA_NAME24;
         const chartContainerId = `chart-${type}-${identifier}-single`;
-        html += generateItemContent(type, props, true, chartContainerId);
+        const { dataContent, chartContent } = generateItemContent(type, props, true, chartContainerId);
+
+        // Two column layout: 2/3 for chart, 1/3 for data
+        html += `
+            <div style="display: flex; gap: 12px; height: 100%;">
+                <div style="flex: 2; min-width: 0;">
+                    ${chartContent}
+                </div>
+                <div style="flex: 1; min-width: 0; overflow-y: auto;">
+                    ${dataContent}
+                </div>
+            </div>
+        `;
 
         html += `</div>`;
     } else {
@@ -1186,7 +1217,8 @@ function updateSelectionDisplay() {
             html += `<div style="margin-bottom: 12px; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF;">`;
 
             // Use the helper function to generate item content
-            html += generateItemContent(type, props);
+            const { dataContent } = generateItemContent(type, props);
+            html += dataContent;
 
             html += `</div>`;
         });
