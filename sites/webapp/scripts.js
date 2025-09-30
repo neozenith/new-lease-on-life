@@ -508,6 +508,8 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
 
   // Build query based on geospatial type and query strategy
   let query;
+  let result;
+  let rows;
 
   if (geospatialType === "LGA") {
     // Direct LGA matching
@@ -529,6 +531,10 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
             GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
             ORDER BY year, quarter, time_bucket;
         `;
+
+    result = await window.duckdbConnection.query(query);
+    rows = result.toArray();
+    console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
   } else if (geospatialType === "SUBURB_BY_POSTCODE") {
     // Aggregate SUBURB data by postcode
     query = `
@@ -549,8 +555,13 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
             GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
             ORDER BY year, quarter, time_bucket;
         `;
+
+    result = await window.duckdbConnection.query(query);
+    rows = result.toArray();
+    console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
   } else if (geospatialType === "SUBURB") {
-    // Direct SUBURB matching (for SAL fuzzy matches)
+    // Direct SUBURB matching with fallback to fuzzy matching
+    // First try exact match
     query = `
             SELECT
                 time_bucket,
@@ -569,14 +580,74 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
             GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
             ORDER BY year, quarter, time_bucket;
         `;
+
+    result = await window.duckdbConnection.query(query);
+    rows = result.toArray();
+
+    // If no exact match found, try fuzzy matching with LIKE
+    if (rows.length === 0) {
+      console.log(`No exact match for "${geospatialId}", trying fuzzy match...`);
+
+      // Try prefix matching: "Richmond" → "Richmond-Burnley"
+      const fuzzyQuery = `
+              SELECT DISTINCT geospatial_id
+              FROM rental_sales.rental_sales
+              WHERE geospatial_type = 'SUBURB'
+                  AND geospatial_id LIKE '${geospatialId}%'
+                  AND value_type = '${dataType}'
+              LIMIT 1;
+          `;
+
+      const fuzzyResult = await window.duckdbConnection.query(fuzzyQuery);
+      const fuzzyRows = fuzzyResult.toArray();
+
+      if (fuzzyRows.length > 0) {
+        const matchedSuburb = fuzzyRows[0].geospatial_id;
+        console.log(`Fuzzy match found: "${geospatialId}" → "${matchedSuburb}"`);
+
+        // Re-run the original query with the matched suburb name
+        query = `
+                SELECT
+                    time_bucket,
+                    time_bucket_type,
+                    AVG(value) as avg_value,
+                    year,
+                    quarter,
+                    dwelling_type,
+                    bedrooms,
+                    COUNT(*) as record_count
+                FROM rental_sales.rental_sales
+                WHERE geospatial_type = 'SUBURB'
+                    AND geospatial_id = '${matchedSuburb}'
+                    AND value_type = '${dataType}'
+                    AND value IS NOT NULL
+                GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
+                ORDER BY year, quarter, time_bucket;
+            `;
+
+        result = await window.duckdbConnection.query(query);
+        rows = result.toArray();
+      }
+    }
+
+    console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
+
+    if (rows.length === 0) {
+      // Return empty result structure instead of throwing error
+      return {
+        dates: [],
+        series: {},
+        metadata: {
+          geospatialType: geospatialType,
+          geospatialId: geospatialId,
+          dataType: dataType,
+          seriesKeys: [],
+        },
+      };
+    }
   } else {
     throw new Error(`Unsupported geospatial type: ${geospatialType}`);
   }
-
-  const result = await window.duckdbConnection.query(query);
-  const rows = result.toArray();
-
-  console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
 
   // Helper function to safely convert BigInt/number values
   const safeNumber = (value) => {
@@ -587,35 +658,31 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   };
 
   // Get unique dwelling types, bedroom counts, and time periods
-  const dwellingTypes = [...new Set(rows.map((row) => row.dwelling_type))];
-  const bedroomCounts = [...new Set(rows.map((row) => safeNumber(row.bedrooms)))].filter(
-    (b) => b !== null && b !== undefined,
-  );
+  // Get unique combinations that actually exist in the data
+  const uniqueCombinations = new Set();
+  rows.forEach((row) => {
+    const dwellingType = row.dwelling_type;
+    const bedrooms = safeNumber(row.bedrooms);
 
-  // Create series combinations: dwelling_type + bedroom count
+    // Skip "All" dwelling type as we'll aggregate it separately
+    if (dwellingType !== "All") {
+      if (bedrooms && bedrooms > 0) {
+        uniqueCombinations.add(`${dwellingType}-${bedrooms}`);
+      } else {
+        // If no bedroom data, just use dwelling type
+        uniqueCombinations.add(dwellingType);
+      }
+    }
+  });
+
+  // Create series keys from unique combinations
   const seriesKeys = [];
 
   // Add "All Properties" series (aggregated across all dwelling types and bedrooms)
   seriesKeys.push("All Properties");
 
-  // Add specific series based on available data
-  if (bedroomCounts.length > 0) {
-    // If bedroom data is available, create bedroom+dwelling combinations
-    dwellingTypes.forEach((dwellingType) => {
-      bedroomCounts.forEach((bedrooms) => {
-        if (bedrooms && bedrooms > 0) {
-          seriesKeys.push(`${bedrooms}br-${dwellingType}`);
-        }
-      });
-    });
-  } else {
-    // If no bedroom data, create series by dwelling type only (excluding "All")
-    dwellingTypes.forEach((dwellingType) => {
-      if (dwellingType !== "All") {
-        seriesKeys.push(dwellingType);
-      }
-    });
-  }
+  // Add all unique combinations found in the data
+  seriesKeys.push(...Array.from(uniqueCombinations).sort());
 
   const uniqueDates = [
     ...new Set(
@@ -646,8 +713,6 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
       geospatialType,
       geospatialId,
       recordCount: rows.length,
-      dwellingTypes,
-      bedroomCounts,
       seriesKeys,
       yearRange:
         rows.length > 0
@@ -692,18 +757,19 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
 
     const dateIndex = dateIndexMap[dateLabel];
     if (dateIndex !== undefined && avgValue !== null && avgValue !== undefined) {
-      if (bedroomCounts.length > 0) {
-        // Add to specific bedroom+dwelling series
+      // Skip "All" dwelling type rows as we aggregate them separately
+      if (dwellingType !== "All") {
+        // Determine the series key based on whether bedroom data exists
+        let seriesKey;
         if (bedrooms && bedrooms > 0) {
-          const specificSeriesKey = `${bedrooms}br-${dwellingType}`;
-          if (data.series[specificSeriesKey]) {
-            data.series[specificSeriesKey][dateIndex] = Math.round(avgValue);
-          }
+          seriesKey = `${dwellingType}-${bedrooms}`;
+        } else {
+          seriesKey = dwellingType;
         }
-      } else {
-        // Add to dwelling-type-only series (when no bedroom data available)
-        if (dwellingType !== "All" && data.series[dwellingType]) {
-          data.series[dwellingType][dateIndex] = Math.round(avgValue);
+
+        // Add to the appropriate series
+        if (data.series[seriesKey]) {
+          data.series[seriesKey][dateIndex] = Math.round(avgValue);
         }
       }
     }
@@ -763,23 +829,18 @@ function getGeospatialTypeFromSelection(item) {
       geospatialId: props.LGA_NAME24,
       queryType: "lga",
     };
-  } else if (type === "sal" && props.SAL_CODE21) {
-    // SAL maps to SUBURB using fuzzy-matched names from our mapping
-    const salCode = props.SAL_CODE21;
-    const mappedSuburb = window.SAL_TO_SUBURB_MAPPINGS?.[salCode];
+  } else if (type === "sal" && props.SAL_NAME21) {
+    // SAL is a synonym for SUBURB - use the SAL name directly to query SUBURB data
+    // Clean up the name: remove "(Vic.)" suffix and trim whitespace
+    const cleanedName = props.SAL_NAME21.replace(/\s*\(Vic\.\)\s*$/i, '').trim();
 
-    if (mappedSuburb) {
-      return {
-        geospatialType: "SUBURB",
-        geospatialId: mappedSuburb,
-        queryType: "sal_to_suburb",
-        originalId: salCode,
-        originalName: props.SAL_NAME21,
-      };
-    } else {
-      console.warn(`No suburb mapping found for SAL ${salCode} (${props.SAL_NAME21})`);
-      return null;
-    }
+    return {
+      geospatialType: "SUBURB",
+      geospatialId: cleanedName,
+      queryType: "sal_as_suburb",
+      originalId: props.SAL_CODE21,
+      originalName: props.SAL_NAME21,
+    };
   } else if (type === "postcodes" && props.POA_CODE21) {
     // Postcode uses aggregated SUBURB data by postcode column
     const postcodeCode = props.POA_CODE21;
@@ -849,22 +910,22 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
       if (seriesKey === "All Properties") return "#1976D2";
 
       // House series use green tones
-      if (seriesKey.includes("House")) {
-        if (seriesKey.includes("1br")) return "#A5D6A7";
-        if (seriesKey.includes("2br")) return "#81C784";
-        if (seriesKey.includes("3br")) return "#4CAF50";
-        if (seriesKey.includes("4br")) return "#388E3C";
-        if (seriesKey.includes("5br")) return "#2E7D32";
+      if (seriesKey.startsWith("House-")) {
+        if (seriesKey.includes("-1")) return "#A5D6A7";
+        if (seriesKey.includes("-2")) return "#81C784";
+        if (seriesKey.includes("-3")) return "#4CAF50";
+        if (seriesKey.includes("-4")) return "#388E3C";
+        if (seriesKey.includes("-5")) return "#2E7D32";
         return "#4CAF50"; // default green
       }
 
       // Unit series use orange tones
-      if (seriesKey.includes("Unit")) {
-        if (seriesKey.includes("1br")) return "#FFCC80";
-        if (seriesKey.includes("2br")) return "#FFB74D";
-        if (seriesKey.includes("3br")) return "#FF9800";
-        if (seriesKey.includes("4br")) return "#F57C00";
-        if (seriesKey.includes("5br")) return "#E65100";
+      if (seriesKey.startsWith("Unit-")) {
+        if (seriesKey.includes("-1")) return "#FFCC80";
+        if (seriesKey.includes("-2")) return "#FFB74D";
+        if (seriesKey.includes("-3")) return "#FF9800";
+        if (seriesKey.includes("-4")) return "#F57C00";
+        if (seriesKey.includes("-5")) return "#E65100";
         return "#FF9800"; // default orange
       }
 
@@ -1096,7 +1157,10 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
     if (includeChart && chartContainerId) {
       chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
       // Create the chart after the DOM is updated
-      setTimeout(() => createAreaChart(chartContainerId, "SAL", props.SAL_NAME21, "rent"), 200);
+      // SAL is a synonym for SUBURB in the database
+      // Clean up the name: remove "(Vic.)" suffix and trim whitespace
+      const cleanedSuburbName = props.SAL_NAME21.replace(/\s*\(Vic\.\)\s*$/i, '').trim();
+      setTimeout(() => createAreaChart(chartContainerId, "SUBURB", cleanedSuburbName, "rent"), 200);
     }
   } else if (type === "ptv-stops-tram" || type === "ptv-stops-train") {
     dataContent += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
