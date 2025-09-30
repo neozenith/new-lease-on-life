@@ -23,8 +23,9 @@ format:
 	# Code Formatting
 	npx -y prettier './**/*.{js,css,html}' --write --print-width 120    
 
-test: format
-	uv run pytest ../../"$(TEST_DIR)" --base-url http://localhost:$(PORT_NUMBER) --browser chromium
+test: 
+	uv run pytest ../../"$(TEST_DIR)" -vvv --base-url http://localhost:$(PORT_NUMBER)/index.html --browser chromium
+
 
 clean:
 	# No build artifacts to clean

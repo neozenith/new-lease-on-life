@@ -77,19 +77,6 @@ export-shapefiles = [
     "python-dotenv>=1.0.0",
 ]
 
-[tool.ruff]
-target-version = "py312"
-line-length = 100
-[tool.ruff.lint]
-select = ["E", "F", "B", "I", "N", "UP", "S", "BLE", "A", "C4", "T10", "ICN"]
-ignore = ["E501", "N806", "BLE001"]
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
 
 [tool.rumdl]
 line-length = 100
@@ -109,6 +96,7 @@ respect-gitignore = true
 dev = [
     "playwright>=1.53.0",
     "pytest-playwright>=0.7.1",
+    "pytest-xdist>=3.8.0",
 ]
 
 # Rule-specific configurations (uncomment and modify as needed)
@@ -131,3 +119,54 @@ dev = [
 # [tool.rumdl.MD044]
 # names = ["rumdl", "Markdown", "GitHub"]  # Proper names that should be capitalized correctly
 # code_blocks_excluded = true  # Exclude code blocks from proper name check
+
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",# pycodestyle
+    "F", # Pyflakes
+    "UP", # pyupgrade
+    "B", # flake8-bugbear
+    "SIM", # flake8-simplify
+    # "I", # isort # Let's let isort cook until ruff supports the import headings
+    "PTH", # falek8-use-pathlib 
+    "TCH", # flake8-type-checking
+    # "S", # flake8-bandit
+    "C90", #mccabe
+]
+ignore = ["E731", "E722"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 5.
+max-complexity = 10
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+import_heading_stdlib = "Standard Library"
+import_heading_firstparty = "Our Libraries"
+import_heading_thirdparty = "Third Party"
+
+
+[tool.coverage.run]
+omit = ["tests/*", "**/__init__.py", "tasks.py"]
+branch = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-s -vvv --color=yes --tb=short -n auto"

@@ -52,12 +52,12 @@ PROJECT_ROOT = SCRIPT_DIR.parent
 CANDIDATES_YAML = PROJECT_ROOT / "candidates.yml"
 OUTPUT_DIR = PROJECT_ROOT / "data" / "candidate_real_estate"
 OUTPUT_ALL_CANDIDATES = OUTPUT_DIR / "all_candidates.geojson"
-WEBSITE_OUTPUT_DIR = PROJECT_ROOT / "static" / "data"
+WEBSITE_OUTPUT_DIR = PROJECT_ROOT / "sites" / "webapp" / "data"
 OUTPUT_WEBSITE_ALL_CANDIDATES = WEBSITE_OUTPUT_DIR / "all_candidates.geojson"
 
 # Isochrone files for walkability check
-INPUT_ISOCHRONE_FOOT_5MIN = PROJECT_ROOT / "static" / "data" / "5.geojson"
-INPUT_ISOCHRONE_FOOT_15MIN = PROJECT_ROOT / "static" / "data" / "15.geojson"
+INPUT_ISOCHRONE_FOOT_5MIN = WEBSITE_OUTPUT_DIR / "5.geojson"
+INPUT_ISOCHRONE_FOOT_15MIN = WEBSITE_OUTPUT_DIR / "15.geojson"
 
 # Environment variables
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
