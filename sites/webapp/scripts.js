@@ -19,7 +19,7 @@ const MAX_SELECTIONS_BY_TYPE = {
   "real-estate-candidates": 2,
   postcodes: 2,
   lga: 2,
-  sa2: 2,
+  sal: 2,
   "ptv-stops-tram": 1,
   "ptv-stops-train": 1,
 };
@@ -299,17 +299,17 @@ window.deckgl = new DeckGL({
         html += `LGA Code: ${props.LGA_CODE24}<br/>`;
       }
     }
-    // Check if this is an SA2 boundary
-    else if (props.SA2_NAME21) {
-      html += `<strong>SA2: ${props.SA2_NAME21}</strong><br/>`;
+    // Check if this is an SAL boundary
+    else if (props.SAL_NAME21) {
+      html += `<strong>SAL: ${props.SAL_NAME21}</strong><br/>`;
       if (props.STE_NAME21) {
         html += `State: ${props.STE_NAME21}<br/>`;
       }
       if (props.AREASQKM21) {
         html += `Area: ${Number(props.AREASQKM21).toFixed(1)} km²<br/>`;
       }
-      if (props.SA2_CODE21) {
-        html += `SA2 Code: ${props.SA2_CODE21}<br/>`;
+      if (props.SAL_CODE21) {
+        html += `SAL Code: ${props.SAL_CODE21}<br/>`;
       }
     }
     // Add stop name if available (for isochrones and PTV stops)
@@ -379,9 +379,9 @@ function getItemType(layer) {
     return "lga";
   }
 
-  // Check for SA2 boundaries
-  if (layerId === "suburbs-sa2") {
-    return "sa2";
+  // Check for SAL boundaries
+  if (layerId === "suburbs-sal") {
+    return "sal";
   }
 
   // Check for postcodes (matching the actual layer ID from config)
@@ -417,8 +417,8 @@ function getItemId(object, layer) {
     return `${type}-${props.address}`;
   } else if (type === "lga" && props.LGA_NAME24) {
     return `${type}-${props.LGA_NAME24}`;
-  } else if (type === "sa2" && props.SA2_NAME21) {
-    return `${type}-${props.SA2_NAME21}`;
+  } else if (type === "sal" && props.SAL_NAME21) {
+    return `${type}-${props.SAL_NAME21}`;
   } else if (type === "postcodes" && props.POA_NAME21) {
     return `${type}-${props.POA_NAME21}`;
   } else if ((type === "ptv-stops-tram" || type === "ptv-stops-train") && props.stop_name) {
@@ -487,14 +487,14 @@ function clearAllSelections() {
   updateLayerHighlights();
 }
 
-// Function to query rental data from DuckDB for LGAs, SA2s, or suburbs
+// Function to query rental data from DuckDB for LGAs, SALs, or suburbs
 async function queryRentalData(geospatialType, geospatialId, dataType = "rent") {
   if (!window.duckdbConnection) {
     throw new Error("DuckDB connection not available. Database must be initialized first.");
   }
 
   // Sanitize inputs to prevent SQL injection
-  const validGeospatialTypes = ["LGA", "SA2", "SUBURB", "SUBURB_BY_POSTCODE"];
+  const validGeospatialTypes = ["LGA", "SAL", "SUBURB", "SUBURB_BY_POSTCODE"];
   const validDataTypes = ["rent", "sales"];
 
   if (!validGeospatialTypes.includes(geospatialType)) {
@@ -550,7 +550,7 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
             ORDER BY year, quarter, time_bucket;
         `;
   } else if (geospatialType === "SUBURB") {
-    // Direct SUBURB matching (for SA2 fuzzy matches)
+    // Direct SUBURB matching (for SAL fuzzy matches)
     query = `
             SELECT
                 time_bucket,
@@ -763,21 +763,21 @@ function getGeospatialTypeFromSelection(item) {
       geospatialId: props.LGA_NAME24,
       queryType: "lga",
     };
-  } else if (type === "sa2" && props.SA2_CODE21) {
-    // SA2 maps to SUBURB using fuzzy-matched names from our mapping
-    const sa2Code = props.SA2_CODE21;
-    const mappedSuburb = window.SA2_TO_SUBURB_MAPPINGS?.[sa2Code];
+  } else if (type === "sal" && props.SAL_CODE21) {
+    // SAL maps to SUBURB using fuzzy-matched names from our mapping
+    const salCode = props.SAL_CODE21;
+    const mappedSuburb = window.SAL_TO_SUBURB_MAPPINGS?.[salCode];
 
     if (mappedSuburb) {
       return {
         geospatialType: "SUBURB",
         geospatialId: mappedSuburb,
-        queryType: "sa2_to_suburb",
-        originalId: sa2Code,
-        originalName: props.SA2_NAME21,
+        queryType: "sal_to_suburb",
+        originalId: salCode,
+        originalName: props.SAL_NAME21,
       };
     } else {
-      console.warn(`No suburb mapping found for SA2 ${sa2Code} (${props.SA2_NAME21})`);
+      console.warn(`No suburb mapping found for SAL ${salCode} (${props.SAL_NAME21})`);
       return null;
     }
   } else if (type === "postcodes" && props.POA_CODE21) {
@@ -802,7 +802,7 @@ function getGeospatialTypeFromSelection(item) {
   return null;
 }
 
-// Function to create a Plotly chart for any geospatial area (LGA, SA2, or postcode)
+// Function to create a Plotly chart for any geospatial area (LGA, SAL, or postcode)
 async function createAreaChart(containerId, geospatialType, geospatialId, chartType = "rent") {
   try {
     // Query data from DuckDB
@@ -830,8 +830,8 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
     const areaTypeLabel =
       geospatialType === "LGA"
         ? "LGA"
-        : geospatialType === "SA2"
-          ? "SA2"
+        : geospatialType === "SAL"
+          ? "SAL"
           : geospatialType === "SUBURB"
             ? "Suburb"
             : geospatialType;
@@ -1008,7 +1008,7 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
       "real-estate-candidates": "Real Estate Property",
       postcodes: "Postcode",
       lga: "Local Government Area",
-      sa2: "Statistical Area 2",
+      sal: "Suburbs and Localities (SAL)",
       "ptv-stops-tram": "Tram Stop",
       "ptv-stops-train": "Train Station",
     }[type] || type;
@@ -1074,16 +1074,16 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
       // Create the chart after the DOM is updated
       setTimeout(() => createAreaChart(chartContainerId, "LGA", props.LGA_NAME24, "rent"), 200);
     }
-  } else if (type === "sa2") {
-    dataContent += `<strong>SA2: ${props.SA2_NAME21}</strong><br/>`;
+  } else if (type === "sal") {
+    dataContent += `<strong>SAL: ${props.SAL_NAME21}</strong><br/>`;
     if (props.STE_NAME21) {
       dataContent += `State: ${props.STE_NAME21}<br/>`;
     }
     if (props.AREASQKM21) {
       dataContent += `Area: ${Number(props.AREASQKM21).toFixed(1)} km²<br/>`;
     }
-    if (props.SA2_CODE21) {
-      dataContent += `Code: ${props.SA2_CODE21}<br/>`;
+    if (props.SAL_CODE21) {
+      dataContent += `Code: ${props.SAL_CODE21}<br/>`;
     }
     if (props.SA3_NAME21) {
       dataContent += `SA3: ${props.SA3_NAME21}<br/>`;
@@ -1096,7 +1096,7 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
     if (includeChart && chartContainerId) {
       chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
       // Create the chart after the DOM is updated
-      setTimeout(() => createAreaChart(chartContainerId, "SA2", props.SA2_NAME21, "rent"), 200);
+      setTimeout(() => createAreaChart(chartContainerId, "SAL", props.SAL_NAME21, "rent"), 200);
     }
   } else if (type === "ptv-stops-tram" || type === "ptv-stops-train") {
     dataContent += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
@@ -1157,14 +1157,14 @@ function updateSelectionDisplay() {
 
       html += `<div style="flex: 1; padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF; overflow: hidden;">`;
 
-      // For postcodes, LGAs, and SA2s, include charts when there are 1-2 selected
+      // For postcodes, LGAs, and SALs, include charts when there are 1-2 selected
       const shouldIncludeChart =
-        (type === "postcodes" || type === "lga" || type === "sa2") &&
+        (type === "postcodes" || type === "lga" || type === "sal") &&
         (totalItems.length === 1 || totalItems.length === 2);
       let chartContainerId = null;
       if (shouldIncludeChart) {
         const identifier =
-          type === "postcodes" ? props.POA_NAME21 : type === "sa2" ? props.SA2_NAME21 : props.LGA_NAME24;
+          type === "postcodes" ? props.POA_NAME21 : type === "sal" ? props.SAL_NAME21 : props.LGA_NAME24;
         chartContainerId = `chart-${type}-${identifier}-${index}`;
       }
 
@@ -1193,16 +1193,16 @@ function updateSelectionDisplay() {
     html += `</div>`;
   } else if (
     totalItems.length === 1 &&
-    (totalItems[0].type === "postcodes" || totalItems[0].type === "lga" || totalItems[0].type === "sa2")
+    (totalItems[0].type === "postcodes" || totalItems[0].type === "lga" || totalItems[0].type === "sal")
   ) {
-    // Special case for single postcode, LGA, or SA2 selection - show chart
+    // Special case for single postcode, LGA, or SAL selection - show chart
     const item = totalItems[0];
     const props = item.properties;
     const type = item.type;
 
     html += `<div style="padding: 12px; background: #f9f9f9; border-radius: 4px; border-left: 3px solid #007AFF; overflow: hidden; height: 100%;">`;
 
-    const identifier = type === "postcodes" ? props.POA_NAME21 : type === "sa2" ? props.SA2_NAME21 : props.LGA_NAME24;
+    const identifier = type === "postcodes" ? props.POA_NAME21 : type === "sal" ? props.SAL_NAME21 : props.LGA_NAME24;
     const chartContainerId = `chart-${type}-${identifier}-single`;
     const { dataContent, chartContent } = generateItemContent(type, props, true, chartContainerId);
 
@@ -1227,7 +1227,7 @@ function updateSelectionDisplay() {
           "real-estate-candidates": "Real Estate Properties",
           postcodes: "Postcodes",
           lga: "Local Government Areas",
-          sa2: "Statistical Areas 2",
+          sal: "Suburbs and Localities (SAL)",
           "ptv-stops-tram": "Tram Stops",
           "ptv-stops-train": "Train Stations",
         }[type] || type;
@@ -1505,7 +1505,7 @@ const layerDisplayNames = {
   "isochrones-5min": "5-minute Walking",
   "isochrones-15min": "15-minute Walking",
   "lga-boundaries": "LGA Boundaries",
-  "suburbs-sa2": "SA2 Boundaries",
+  "suburbs-sal": "Suburbs and Localities (SAL)",
   "postcodes-with-trams-trains": "Serviced Postcodes",
   "ptv-lines-tram": "Tram Lines",
   "ptv-lines-train": "Train Lines",

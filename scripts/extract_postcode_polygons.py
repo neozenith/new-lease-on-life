@@ -137,6 +137,8 @@ def extract_postcode_polygons():
             gdf_polygons = gdf_polygons.drop_duplicates(subset=["LGA_CODE24"], keep="first")
         if "sa2" in target:
             gdf_polygons = gdf_polygons.drop_duplicates(subset=["SA2_CODE21"], keep="first")
+        if "sal" in target:
+            gdf_polygons = gdf_polygons.drop_duplicates(subset=["SAL_CODE21"], keep="first")
 
         gdf = gdf_polygons.copy()
         unioned_geom = gdf.geometry.union_all()

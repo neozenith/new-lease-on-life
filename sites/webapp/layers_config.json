@@ -118,9 +118,9 @@
     },
     
     {
-      "id": "suburbs-sa2",
+      "id": "suburbs-sal",
       "type": "GeoJsonLayer",
-      "data": "./data/selected_sa2_2021_aust_gda2020.geojson",
+      "data": "./data/selected_sal_2021_aust_gda2020.geojson",
       "filled": true,
       "stroked": true,
       "extruded": false,

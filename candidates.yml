@@ -35,7 +35,9 @@
         bathrooms: 2
         parking: 2
 
-- 2A Grevillia Road, Pascoe Vale, Vic 3044:
+        lat: -37.7986978
+        lon: 144.8808131
+-   2A Grevillia Road, Pascoe Vale, Vic 3044:
         link: https://www.realestate.com.au/property-townhouse-vic-pascoe+vale-437065268
         rent: 600
         bedrooms: 3
@@ -43,6 +45,5 @@
         parking: 2
 
 
-
-        lat: -37.7986978
-        lon: 144.8808131
+        lat: -37.7211929
+        lon: 144.9261615
