@@ -59,5 +59,6 @@ data/
 
 !sites/webapp/data/
 !sites/webapp/data/*.geojson
+!sites/webapp/data/*.duckdb
 
 tmp/

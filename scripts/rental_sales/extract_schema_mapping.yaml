@@ -1,9 +1,9 @@
 
-- file: 'data/originals/rental/Moving annual rent by suburb - December quarter 2024.xlsx'
+- file: 'data/originals/rental_sales/rental/Moving annual rent by suburb - December quarter 2024.xlsx'
   data_type: rental
   data_frequency: quarterly # Moving annual by quarter
   data_granularity: suburb
-  time_bucket_format: 'MMM YYYY'
+  time_bucket_format: '%b %Y' # MMM YYYY
   sheets:
     - sheet: '1 bedroom flat'
       dwelling_type: unit
@@ -48,11 +48,11 @@
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
 
-- file: 'data/originals/rental/Quarterly median rents by Local Government Area - December quarter 2024.xlsx'
+- file: 'data/originals/rental_sales/rental/Quarterly median rents by Local Government Area - December quarter 2024.xlsx'
   data_type: rental
   data_frequency: quarterly
   data_granularity: lga
-  time_bucket_format: 'MMM YYYY'
+  time_bucket_format: '%b %Y' # MMM YYYY
   sheets:
     - sheet: '1br Flat'
       dwelling_type: unit
@@ -100,11 +100,11 @@
 
 
 
-- file: 'data/originals/sales/Houses-by-suburb-2013-2023.xlsx'
+- file: 'data/originals/rental_sales/sales/Houses-by-suburb-2013-2023.xlsx'
   data_type: sales
   data_frequency: annual
   data_granularity: suburb
-  time_bucket_format: 'YYYY'
+  time_bucket_format: '%Y' # YYYY
   sheets:
     - sheet: 'Table 1'
       dwelling_type: house
@@ -113,11 +113,11 @@
       statistic: [median] 
       geospatial_range: A3:A791
 
-- file: 'data/originals/sales/Units-by-suburb-2013-2023.xlsx'
+- file: 'data/originals/rental_sales/sales/Units-by-suburb-2013-2023.xlsx'
   data_type: sales
   data_frequency: annual
   data_granularity: suburb
-  time_bucket_format: 'YYYY'
+  time_bucket_format: '%Y' # YYYY
   sheets:
     - sheet: 'Table 1'
       dwelling_type: unit
@@ -126,11 +126,11 @@
       statistic: [median] 
       geospatial_range: A3:A446
 
-- file: 'data/originals/sales/Vacant-land-by-suburb-2013-2023.xlsx'
+- file: 'data/originals/rental_sales/sales/Vacant-land-by-suburb-2013-2023.xlsx'
   data_type: sales
   data_frequency: annual
   data_granularity: suburb
-  time_bucket_format: 'YYYY'
+  time_bucket_format: '%Y' # YYYY
   sheets:
     - sheet: 'Table 1'
       dwelling_type: vacant_land

@@ -82,7 +82,8 @@ rentals: consolidate_isochrones
 	time uv run scripts/geocode_candidates.py
 
 rental_sales:
-	uv run scripts/rental_sales/extract.py
+	uv run scripts/rental_sales/extract.py --input data/originals/rental_sales/
+	cp data/originals/processed/all_extracted_data.duckdb sites/webapp/data/rental_sales.duckdb
 
 ##################################################
 # MAPPING STATIC SITE DATA TO SOURCE JOBS
