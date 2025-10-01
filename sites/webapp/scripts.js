@@ -83,16 +83,16 @@ async function initializeDuckDB() {
 
   // Load the rental sales database
   console.log("Loading rental sales database...");
-  const response = await fetch("./data/rental_sales.db");
+  const response = await fetch("./data/rental_sales.duckdb");
   if (!response.ok) {
     updateDuckDBStatus('error', 'Failed to fetch database file');
-    throw new Error(`Failed to fetch rental_sales.db: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to fetch rental_sales.duckdb: ${response.status} ${response.statusText}`);
   }
 
   updateDuckDBStatus('loading', 'Connecting to database...');
   const dbBuffer = await response.arrayBuffer();
-  await db.registerFileBuffer("rental_sales.db", new Uint8Array(dbBuffer));
-  await connection.query("ATTACH 'rental_sales.db' AS rental_sales;");
+  await db.registerFileBuffer("rental_sales.duckdb", new Uint8Array(dbBuffer));
+  await connection.query("ATTACH 'rental_sales.duckdb' AS rental_sales;");
 
   // Test the connection
   updateDuckDBStatus('loading', 'Verifying connection...');
@@ -524,8 +524,8 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   }
 
   // Sanitize inputs to prevent SQL injection
-  const validGeospatialTypes = ["LGA", "SAL", "SUBURB", "SUBURB_BY_POSTCODE"];
-  const validDataTypes = ["rent", "sales"];
+  const validGeospatialTypes = ["LGA", "SAL", "SUBURB"];
+  const validDataTypes = ["rental", "sales"];
 
   if (!validGeospatialTypes.includes(geospatialType)) {
     throw new Error(`Invalid geospatial type: ${geospatialType}`);
@@ -542,124 +542,50 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   let rows;
 
   if (geospatialType === "LGA") {
-    // Direct LGA matching
+    // Direct LGA matching using geospatial_codes (LGA_CODE24)
     query = `
             SELECT
                 time_bucket,
-                time_bucket_type,
-                AVG(value) as avg_value,
-                year,
-                quarter,
                 dwelling_type,
                 bedrooms,
-                COUNT(*) as record_count
+                statistic,
+                value,
+                EXTRACT(YEAR FROM time_bucket) as year,
+                EXTRACT(QUARTER FROM time_bucket) as quarter
             FROM rental_sales.rental_sales
-            WHERE geospatial_type = 'LGA'
-                AND geospatial_id = '${geospatialId}'
-                AND value_type = '${dataType}'
+            WHERE geospatial_type = 'lga'
+                AND geospatial_codes = '${geospatialId}'
+                AND data_type = '${dataType}'
+                AND statistic = 'median'
                 AND value IS NOT NULL
-            GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
-            ORDER BY year, quarter, time_bucket;
-        `;
-
-    result = await window.duckdbConnection.query(query);
-    rows = result.toArray();
-    console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
-  } else if (geospatialType === "SUBURB_BY_POSTCODE") {
-    // Aggregate SUBURB data by postcode
-    query = `
-            SELECT
-                time_bucket,
-                time_bucket_type,
-                AVG(value) as avg_value,
-                year,
-                quarter,
-                dwelling_type,
-                bedrooms,
-                COUNT(*) as record_count
-            FROM rental_sales.rental_sales
-            WHERE geospatial_type = 'SUBURB'
-                AND postcode = '${geospatialId}'
-                AND value_type = '${dataType}'
-                AND value IS NOT NULL
-            GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
-            ORDER BY year, quarter, time_bucket;
+            ORDER BY time_bucket, dwelling_type, bedrooms;
         `;
 
     result = await window.duckdbConnection.query(query);
     rows = result.toArray();
     console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
   } else if (geospatialType === "SUBURB") {
-    // Direct SUBURB matching with fallback to fuzzy matching
-    // First try exact match
+    // Direct SUBURB matching using geospatial_codes (SAL_CODE21)
     query = `
             SELECT
                 time_bucket,
-                time_bucket_type,
-                AVG(value) as avg_value,
-                year,
-                quarter,
                 dwelling_type,
                 bedrooms,
-                COUNT(*) as record_count
+                statistic,
+                value,
+                EXTRACT(YEAR FROM time_bucket) as year,
+                EXTRACT(QUARTER FROM time_bucket) as quarter
             FROM rental_sales.rental_sales
-            WHERE geospatial_type = 'SUBURB'
-                AND geospatial_id = '${geospatialId}'
-                AND value_type = '${dataType}'
+            WHERE geospatial_type = 'suburb'
+                AND geospatial_codes = '${geospatialId}'
+                AND data_type = '${dataType}'
+                AND statistic = 'median'
                 AND value IS NOT NULL
-            GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
-            ORDER BY year, quarter, time_bucket;
+            ORDER BY time_bucket, dwelling_type, bedrooms;
         `;
 
     result = await window.duckdbConnection.query(query);
     rows = result.toArray();
-
-    // If no exact match found, try fuzzy matching with LIKE
-    if (rows.length === 0) {
-      console.log(`No exact match for "${geospatialId}", trying fuzzy match...`);
-
-      // Try prefix matching: "Richmond" → "Richmond-Burnley"
-      const fuzzyQuery = `
-              SELECT DISTINCT geospatial_id
-              FROM rental_sales.rental_sales
-              WHERE geospatial_type = 'SUBURB'
-                  AND geospatial_id LIKE '${geospatialId}%'
-                  AND value_type = '${dataType}'
-              LIMIT 1;
-          `;
-
-      const fuzzyResult = await window.duckdbConnection.query(fuzzyQuery);
-      const fuzzyRows = fuzzyResult.toArray();
-
-      if (fuzzyRows.length > 0) {
-        const matchedSuburb = fuzzyRows[0].geospatial_id;
-        console.log(`Fuzzy match found: "${geospatialId}" → "${matchedSuburb}"`);
-
-        // Re-run the original query with the matched suburb name
-        query = `
-                SELECT
-                    time_bucket,
-                    time_bucket_type,
-                    AVG(value) as avg_value,
-                    year,
-                    quarter,
-                    dwelling_type,
-                    bedrooms,
-                    COUNT(*) as record_count
-                FROM rental_sales.rental_sales
-                WHERE geospatial_type = 'SUBURB'
-                    AND geospatial_id = '${matchedSuburb}'
-                    AND value_type = '${dataType}'
-                    AND value IS NOT NULL
-                GROUP BY time_bucket, time_bucket_type, year, quarter, dwelling_type, bedrooms
-                ORDER BY year, quarter, time_bucket;
-            `;
-
-        result = await window.duckdbConnection.query(query);
-        rows = result.toArray();
-      }
-    }
-
     console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
 
     if (rows.length === 0) {
@@ -692,16 +618,16 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   const uniqueCombinations = new Set();
   rows.forEach((row) => {
     const dwellingType = row.dwelling_type;
-    const bedrooms = safeNumber(row.bedrooms);
+    const bedrooms = row.bedrooms; // Keep as string
 
-    // Skip "All" dwelling type as we'll aggregate it separately
-    if (dwellingType !== "All") {
-      if (bedrooms && bedrooms > 0) {
-        uniqueCombinations.add(`${dwellingType}-${bedrooms}`);
-      } else {
-        // If no bedroom data, just use dwelling type
-        uniqueCombinations.add(dwellingType);
-      }
+    // Capitalize first letter of dwelling type for consistency
+    const formattedDwellingType = dwellingType.charAt(0).toUpperCase() + dwellingType.slice(1);
+
+    // Create series key: "House-2", "Unit-3", etc.
+    if (bedrooms === 'all') {
+      uniqueCombinations.add(formattedDwellingType); // "House", "Unit"
+    } else {
+      uniqueCombinations.add(`${formattedDwellingType}-${bedrooms}`);
     }
   });
 
@@ -719,17 +645,9 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
       rows.map((row) => {
         const year = safeNumber(row.year);
         const quarter = safeNumber(row.quarter);
-        let dateLabel;
-
-        if (row.time_bucket_type === "quarterly") {
-          // Use YYYY-MM format for proper chronological sorting
-          const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
-          dateLabel = `${year}-${monthByQuarter[quarter]}`;
-        } else if (row.time_bucket_type === "annually") {
-          dateLabel = `${year}`;
-        } else {
-          dateLabel = row.time_bucket;
-        }
+        // Use YYYY-MM format for proper chronological sorting
+        const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
+        const dateLabel = `${year}-${monthByQuarter[quarter]}`;
         return dateLabel;
       }),
     ),
@@ -766,41 +684,34 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   });
 
   // Fill in the data for each series
-  // First pass: populate specific bedroom+dwelling combinations OR dwelling-only series
+  // First pass: populate specific bedroom+dwelling combinations
   rows.forEach((row) => {
     const year = safeNumber(row.year);
     const quarter = safeNumber(row.quarter);
-    const avgValue = safeNumber(row.avg_value);
+    const value = safeNumber(row.value);
     const dwellingType = row.dwelling_type;
-    const bedrooms = safeNumber(row.bedrooms);
+    const bedrooms = row.bedrooms; // Already a string
 
-    let dateLabel;
-    if (row.time_bucket_type === "quarterly") {
-      // Use YYYY-MM format for proper chronological sorting
-      const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
-      dateLabel = `${year}-${monthByQuarter[quarter]}`;
-    } else if (row.time_bucket_type === "annually") {
-      dateLabel = `${year}`;
-    } else {
-      dateLabel = row.time_bucket;
-    }
+    // Use YYYY-MM format for proper chronological sorting
+    const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
+    const dateLabel = `${year}-${monthByQuarter[quarter]}`;
 
     const dateIndex = dateIndexMap[dateLabel];
-    if (dateIndex !== undefined && avgValue !== null && avgValue !== undefined) {
-      // Skip "All" dwelling type rows as we aggregate them separately
-      if (dwellingType !== "All") {
-        // Determine the series key based on whether bedroom data exists
-        let seriesKey;
-        if (bedrooms && bedrooms > 0) {
-          seriesKey = `${dwellingType}-${bedrooms}`;
-        } else {
-          seriesKey = dwellingType;
-        }
+    if (dateIndex !== undefined && value !== null && value !== undefined) {
+      // Capitalize first letter of dwelling type for consistency
+      const formattedDwellingType = dwellingType.charAt(0).toUpperCase() + dwellingType.slice(1);
 
-        // Add to the appropriate series
-        if (data.series[seriesKey]) {
-          data.series[seriesKey][dateIndex] = Math.round(avgValue);
-        }
+      // Create series key: "House-2", "Unit-3", etc.
+      let seriesKey;
+      if (bedrooms === 'all') {
+        seriesKey = formattedDwellingType; // "House", "Unit"
+      } else {
+        seriesKey = `${formattedDwellingType}-${bedrooms}`;
+      }
+
+      // Add to the appropriate series
+      if (data.series[seriesKey]) {
+        data.series[seriesKey][dateIndex] = Math.round(value);
       }
     }
   });
@@ -810,36 +721,27 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
     const rowsForDate = rows.filter((row) => {
       const year = safeNumber(row.year);
       const quarter = safeNumber(row.quarter);
-      let rowDateLabel;
-
-      if (row.time_bucket_type === "quarterly") {
-        const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
-        rowDateLabel = `${year}-${monthByQuarter[quarter]}`;
-      } else if (row.time_bucket_type === "annually") {
-        rowDateLabel = `${year}`;
-      } else {
-        rowDateLabel = row.time_bucket;
-      }
+      const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
+      const rowDateLabel = `${year}-${monthByQuarter[quarter]}`;
       return rowDateLabel === date;
     });
 
     if (rowsForDate.length > 0) {
-      // Calculate weighted average across all dwelling types and bedrooms
+      // Calculate simple average across all dwelling types and bedrooms
       let totalValue = 0;
-      let totalRecords = 0;
+      let count = 0;
 
       rowsForDate.forEach((row) => {
-        const avgValue = safeNumber(row.avg_value);
-        const recordCount = safeNumber(row.record_count) || 1;
+        const value = safeNumber(row.value);
 
-        if (avgValue !== null && avgValue !== undefined) {
-          totalValue += avgValue * recordCount;
-          totalRecords += recordCount;
+        if (value !== null && value !== undefined) {
+          totalValue += value;
+          count++;
         }
       });
 
-      if (totalRecords > 0) {
-        data.series["All Properties"][dateIndex] = Math.round(totalValue / totalRecords);
+      if (count > 0) {
+        data.series["All Properties"][dateIndex] = Math.round(totalValue / count);
       }
     }
   });
@@ -847,57 +749,80 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   return data;
 }
 
+// Function to setup data toggle for rental vs sales
+function setupDataToggle(toggleId, chartContainerId, geospatialType, geospatialId, displayName) {
+  const rentalBtn = document.getElementById(`${toggleId}-rental`);
+  const salesBtn = document.getElementById(`${toggleId}-sales`);
+
+  if (!rentalBtn || !salesBtn) {
+    console.warn(`Toggle buttons not found for ${toggleId}`);
+    return;
+  }
+
+  // Toggle button click handlers
+  const handleToggle = (activeBtn, inactiveBtn, dataType) => {
+    // Update button styles
+    activeBtn.style.background = "#1976D2";
+    activeBtn.style.color = "white";
+    activeBtn.classList.add("active");
+
+    inactiveBtn.style.background = "#e0e0e0";
+    inactiveBtn.style.color = "#666";
+    inactiveBtn.classList.remove("active");
+
+    // Reload chart with new data type
+    createAreaChart(chartContainerId, geospatialType, geospatialId, dataType, displayName);
+  };
+
+  rentalBtn.addEventListener("click", () => {
+    if (!rentalBtn.classList.contains("active")) {
+      handleToggle(rentalBtn, salesBtn, "rental");
+    }
+  });
+
+  salesBtn.addEventListener("click", () => {
+    if (!salesBtn.classList.contains("active")) {
+      handleToggle(salesBtn, rentalBtn, "sales");
+    }
+  });
+}
+
 // Helper function to determine geospatial type from selected item
 function getGeospatialTypeFromSelection(item) {
   const type = item.type;
   const props = item.properties;
 
-  if (type === "lga" && props.LGA_NAME24) {
-    // LGA uses direct name matching
+  if (type === "lga" && props.LGA_CODE24) {
+    // LGA uses LGA_CODE24 for matching
     return {
       geospatialType: "LGA",
-      geospatialId: props.LGA_NAME24,
+      geospatialId: props.LGA_CODE24,
+      displayName: props.LGA_NAME24,
       queryType: "lga",
     };
-  } else if (type === "sal" && props.SAL_NAME21) {
-    // SAL is a synonym for SUBURB - use the SAL name directly to query SUBURB data
-    // Clean up the name: remove "(Vic.)" suffix and trim whitespace
-    const cleanedName = props.SAL_NAME21.replace(/\s*\(Vic\.\)\s*$/i, '').trim();
-
+  } else if (type === "sal" && props.SAL_CODE21) {
+    // SAL uses SAL_CODE21 for matching
     return {
       geospatialType: "SUBURB",
-      geospatialId: cleanedName,
-      queryType: "sal_as_suburb",
+      geospatialId: props.SAL_CODE21,
+      displayName: props.SAL_NAME21,
+      queryType: "sal",
       originalId: props.SAL_CODE21,
       originalName: props.SAL_NAME21,
     };
-  } else if (type === "postcodes" && props.POA_CODE21) {
-    // Postcode uses aggregated SUBURB data by postcode column
-    const postcodeCode = props.POA_CODE21;
-    const mappedPostcode = window.POSTCODE_MAPPINGS?.[postcodeCode];
-
-    if (mappedPostcode) {
-      return {
-        geospatialType: "SUBURB_BY_POSTCODE",
-        geospatialId: mappedPostcode,
-        queryType: "postcode_aggregated",
-        originalId: postcodeCode,
-        originalName: props.POA_NAME21,
-      };
-    } else {
-      console.warn(`No postcode mapping found for ${postcodeCode} (${props.POA_NAME21})`);
-      return null;
-    }
   }
 
   return null;
 }
 
 // Function to create a Plotly chart for any geospatial area (LGA, SAL, or postcode)
-async function createAreaChart(containerId, geospatialType, geospatialId, chartType = "rent") {
+async function createAreaChart(containerId, geospatialType, geospatialId, chartType = "rental", displayName = null) {
   try {
     // Query data from DuckDB
     const data = await queryRentalData(geospatialType, geospatialId, chartType);
+
+    // Use displayName if provided, otherwise fall back to geospatialId
+    const areaName = displayName || geospatialId;
 
     if (!data || data.dates.length === 0 || !data.series || Object.keys(data.series).length === 0) {
       console.warn(`No data available for ${geospatialType} ${geospatialId}`);
@@ -909,7 +834,7 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
           element.innerHTML = `
                         <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
                             <p>📊 No ${chartType} data available</p>
-                            <p style="font-size: 10px; margin-top: 8px;">for ${geospatialType}: ${geospatialId}</p>
+                            <p style="font-size: 10px; margin-top: 8px;">for ${areaName}</p>
                         </div>
                     `;
         }
@@ -921,18 +846,16 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
     const areaTypeLabel =
       geospatialType === "LGA"
         ? "LGA"
-        : geospatialType === "SAL"
-          ? "SAL"
-          : geospatialType === "SUBURB"
-            ? "Suburb"
-            : geospatialType;
+        : geospatialType === "SUBURB"
+          ? "Suburb"
+          : geospatialType;
 
     const chartTitle =
-      chartType === "rent"
-        ? `${geospatialId} ${areaTypeLabel} - Rental Trends`
-        : `${geospatialId} ${areaTypeLabel} - Sales Trends`;
+      chartType === "rental"
+        ? `${areaName} - Rental Trends`
+        : `${areaName} - Sales Trends`;
 
-    const yAxisTitle = chartType === "rent" ? "Weekly Rent ($)" : "Sales Price ($)";
+    const yAxisTitle = chartType === "rental" ? "Weekly Rent ($)" : "Sales Price ($)";
 
     // Define colors for bedroom+dwelling combinations
     const getSeriesColor = (seriesKey) => {
@@ -1090,7 +1013,7 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
 }
 
 // Helper function to generate content for a single item
-function generateItemContent(type, props, includeChart = false, chartContainerId = null) {
+function generateItemContent(type, props, includeChart = false, chartContainerId = null, useSharedToggle = false) {
   let dataContent = "";
   let chartContent = "";
 
@@ -1159,11 +1082,37 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
       dataContent += `Code: ${props.LGA_CODE24}<br/>`;
     }
 
-    // Create chart content separately
+    // Create chart content separately with data type toggle
     if (includeChart && chartContainerId) {
-      chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
-      // Create the chart after the DOM is updated
-      setTimeout(() => createAreaChart(chartContainerId, "LGA", props.LGA_NAME24, "rent"), 200);
+      if (useSharedToggle) {
+        // When using shared toggle, just show the chart without individual toggle
+        chartContent = `<div id="${chartContainerId}" class="shared-chart" style="height: 100%; width: 100%;" data-geo-type="LGA" data-geo-id="${props.LGA_CODE24}" data-display-name="${props.LGA_NAME24}"></div>`;
+        // Create the chart after the DOM is updated
+        setTimeout(() => {
+          createAreaChart(chartContainerId, "LGA", props.LGA_CODE24, "rental", props.LGA_NAME24);
+        }, 200);
+      } else {
+        // Individual toggle for single-item view
+        const toggleId = `toggle-${chartContainerId}`;
+        chartContent = `
+          <div style="display: flex; flex-direction: column; height: 100%; gap: 8px;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+              <button id="${toggleId}-rental" class="data-toggle-btn active" data-chart-id="${chartContainerId}" data-type="rental" style="flex: 1; padding: 6px 12px; background: #1976D2; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                Rental
+              </button>
+              <button id="${toggleId}-sales" class="data-toggle-btn" data-chart-id="${chartContainerId}" data-type="sales" style="flex: 1; padding: 6px 12px; background: #e0e0e0; color: #666; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                Sales
+              </button>
+            </div>
+            <div id="${chartContainerId}" style="flex: 1; min-height: 0;"></div>
+          </div>
+        `;
+        // Create the chart after the DOM is updated
+        setTimeout(() => {
+          createAreaChart(chartContainerId, "LGA", props.LGA_CODE24, "rental", props.LGA_NAME24);
+          setupDataToggle(toggleId, chartContainerId, "LGA", props.LGA_CODE24, props.LGA_NAME24);
+        }, 200);
+      }
     }
   } else if (type === "sal") {
     dataContent += `<strong>SAL: ${props.SAL_NAME21}</strong><br/>`;
@@ -1183,14 +1132,37 @@ function generateItemContent(type, props, includeChart = false, chartContainerId
       dataContent += `SA4: ${props.SA4_NAME21}<br/>`;
     }
 
-    // Create chart content separately
+    // Create chart content separately with data type toggle
     if (includeChart && chartContainerId) {
-      chartContent = `<div id="${chartContainerId}" style="height: 100%; width: 100%;"></div>`;
-      // Create the chart after the DOM is updated
-      // SAL is a synonym for SUBURB in the database
-      // Clean up the name: remove "(Vic.)" suffix and trim whitespace
-      const cleanedSuburbName = props.SAL_NAME21.replace(/\s*\(Vic\.\)\s*$/i, '').trim();
-      setTimeout(() => createAreaChart(chartContainerId, "SUBURB", cleanedSuburbName, "rent"), 200);
+      if (useSharedToggle) {
+        // When using shared toggle, just show the chart without individual toggle
+        chartContent = `<div id="${chartContainerId}" class="shared-chart" style="height: 100%; width: 100%;" data-geo-type="SUBURB" data-geo-id="${props.SAL_CODE21}" data-display-name="${props.SAL_NAME21}"></div>`;
+        // Create the chart after the DOM is updated
+        setTimeout(() => {
+          createAreaChart(chartContainerId, "SUBURB", props.SAL_CODE21, "rental", props.SAL_NAME21);
+        }, 200);
+      } else {
+        // Individual toggle for single-item view
+        const toggleId = `toggle-${chartContainerId}`;
+        chartContent = `
+          <div style="display: flex; flex-direction: column; height: 100%; gap: 8px;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 8px; background: #f5f5f5; border-radius: 4px;">
+              <button id="${toggleId}-rental" class="data-toggle-btn active" data-chart-id="${chartContainerId}" data-type="rental" style="flex: 1; padding: 6px 12px; background: #1976D2; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                Rental
+              </button>
+              <button id="${toggleId}-sales" class="data-toggle-btn" data-chart-id="${chartContainerId}" data-type="sales" style="flex: 1; padding: 6px 12px; background: #e0e0e0; color: #666; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">
+                Sales
+              </button>
+            </div>
+            <div id="${chartContainerId}" style="flex: 1; min-height: 0;"></div>
+          </div>
+        `;
+        // Create the chart after the DOM is updated
+        setTimeout(() => {
+          createAreaChart(chartContainerId, "SUBURB", props.SAL_CODE21, "rental", props.SAL_NAME21);
+          setupDataToggle(toggleId, chartContainerId, "SUBURB", props.SAL_CODE21, props.SAL_NAME21);
+        }, 200);
+      }
     }
   } else if (type === "ptv-stops-tram" || type === "ptv-stops-train") {
     dataContent += `<strong>${props.stop_name || props.STOP_NAME}</strong><br/>`;
@@ -1225,8 +1197,8 @@ function updateSelectionDisplay() {
     return;
   }
 
-  // Show panel - take up bottom third of screen
-  panel.style.height = "33vh";
+  // Show panel - take up bottom half of screen for better chart visibility
+  panel.style.height = "50vh";
 
   // Build content HTML
   let html = "";
@@ -1243,7 +1215,26 @@ function updateSelectionDisplay() {
   // Check if we have exactly 2 items for side-by-side display
   const totalItems = Array.from(selectedItems.values());
   if (totalItems.length === 2) {
-    html += `<div style="display: flex; gap: 16px; height: 100%;">`;
+    // Check if both items support charts
+    const bothHaveCharts = totalItems.every(item =>
+      item.type === "postcodes" || item.type === "lga" || item.type === "sal"
+    );
+
+    // Add shared toggle at the top if both have charts
+    if (bothHaveCharts) {
+      html += `
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; padding: 8px; background: #f5f5f5; border-radius: 4px; margin-bottom: 12px;">
+          <button id="shared-toggle-rental" class="shared-data-toggle-btn active" data-type="rental" style="flex: 1; padding: 8px 16px; background: #1976D2; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500;">
+            Rental Data
+          </button>
+          <button id="shared-toggle-sales" class="shared-data-toggle-btn" data-type="sales" style="flex: 1; padding: 8px 16px; background: #e0e0e0; color: #666; border: none; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 500;">
+            Sales Data
+          </button>
+        </div>
+      `;
+    }
+
+    html += `<div style="display: flex; gap: 16px; height: ${bothHaveCharts ? 'calc(100% - 52px)' : '100%'};">`;
 
     totalItems.forEach((item, index) => {
       const props = item.properties;
@@ -1262,7 +1253,7 @@ function updateSelectionDisplay() {
         chartContainerId = `chart-${type}-${identifier}-${index}`;
       }
 
-      const { dataContent, chartContent } = generateItemContent(type, props, shouldIncludeChart, chartContainerId);
+      const { dataContent, chartContent } = generateItemContent(type, props, shouldIncludeChart, chartContainerId, bothHaveCharts);
 
       if (shouldIncludeChart && chartContent) {
         // Two column layout: 2/3 for chart, 1/3 for data
@@ -1345,6 +1336,46 @@ function updateSelectionDisplay() {
   }
 
   content.innerHTML = html;
+
+  // Setup shared toggle if it exists (for 2-item comparison)
+  const sharedToggleRental = document.getElementById("shared-toggle-rental");
+  const sharedToggleSales = document.getElementById("shared-toggle-sales");
+
+  if (sharedToggleRental && sharedToggleSales) {
+    const handleSharedToggle = (activeBtn, inactiveBtn, dataType) => {
+      // Update button styles
+      activeBtn.style.background = "#1976D2";
+      activeBtn.style.color = "white";
+      activeBtn.classList.add("active");
+
+      inactiveBtn.style.background = "#e0e0e0";
+      inactiveBtn.style.color = "#666";
+      inactiveBtn.classList.remove("active");
+
+      // Reload all charts with the new data type
+      const sharedCharts = document.querySelectorAll(".shared-chart");
+      sharedCharts.forEach(chartEl => {
+        const geoType = chartEl.getAttribute("data-geo-type");
+        const geoId = chartEl.getAttribute("data-geo-id");
+        const displayName = chartEl.getAttribute("data-display-name");
+        const chartId = chartEl.id;
+
+        createAreaChart(chartId, geoType, geoId, dataType, displayName);
+      });
+    };
+
+    sharedToggleRental.addEventListener("click", () => {
+      if (!sharedToggleRental.classList.contains("active")) {
+        handleSharedToggle(sharedToggleRental, sharedToggleSales, "rental");
+      }
+    });
+
+    sharedToggleSales.addEventListener("click", () => {
+      if (!sharedToggleSales.classList.contains("active")) {
+        handleSharedToggle(sharedToggleSales, sharedToggleRental, "sales");
+      }
+    });
+  }
 }
 
 // Update layer highlights to show selected items
