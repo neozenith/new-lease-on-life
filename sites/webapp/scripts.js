@@ -30,9 +30,28 @@ const GEOLOCATION_CONFIG = {
   maximumAge: 0,
 };
 
+// Helper function to update DuckDB status indicator
+function updateDuckDBStatus(status, message) {
+  const statusIcon = document.getElementById('duckdb-status-icon');
+  const statusText = document.getElementById('duckdb-status-text');
+
+  if (!statusIcon || !statusText) return;
+
+  const statusStyles = {
+    loading: { color: '#ffa500', text: message || 'Loading...' },
+    error: { color: '#ff4444', text: message || 'Error loading database' },
+    success: { color: '#00c864', text: message || 'Database connected' }
+  };
+
+  const style = statusStyles[status] || statusStyles.loading;
+  statusIcon.style.background = style.color;
+  statusText.textContent = style.text;
+}
+
 // Initialize DuckDB WASM
 async function initializeDuckDB() {
   console.log("Initializing DuckDB WASM...");
+  updateDuckDBStatus('loading', 'Loading DuckDB library...');
 
   // Wait for duckdb module to be available
   let retries = 20;
@@ -42,11 +61,13 @@ async function initializeDuckDB() {
   }
 
   if (typeof window.duckdb === "undefined") {
+    updateDuckDBStatus('error', 'Failed to load DuckDB library');
     throw new Error("DuckDB WASM module not loaded. Make sure the ES module import completed.");
   }
 
   const duckdb = window.duckdb;
   console.log("DuckDB module loaded");
+  updateDuckDBStatus('loading', 'Initializing database...');
 
   // Create worker and database instance using createWorker helper
   const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
@@ -58,19 +79,23 @@ async function initializeDuckDB() {
   const connection = await db.connect();
 
   console.log("DuckDB initialized successfully");
+  updateDuckDBStatus('loading', 'Loading rental database...');
 
   // Load the rental sales database
   console.log("Loading rental sales database...");
   const response = await fetch("./data/rental_sales.db");
   if (!response.ok) {
+    updateDuckDBStatus('error', 'Failed to fetch database file');
     throw new Error(`Failed to fetch rental_sales.db: ${response.status} ${response.statusText}`);
   }
 
+  updateDuckDBStatus('loading', 'Connecting to database...');
   const dbBuffer = await response.arrayBuffer();
   await db.registerFileBuffer("rental_sales.db", new Uint8Array(dbBuffer));
   await connection.query("ATTACH 'rental_sales.db' AS rental_sales;");
 
   // Test the connection
+  updateDuckDBStatus('loading', 'Verifying connection...');
   const testResult = await connection.query("SELECT COUNT(*) as total_records FROM rental_sales.rental_sales;");
   const recordCount = testResult.toArray()[0].total_records;
   console.log(`Successfully connected to rental sales database with ${recordCount} records`);
@@ -78,6 +103,9 @@ async function initializeDuckDB() {
   // Make globally available
   window.duckdbConnection = connection;
   window.duckdbDatabase = db;
+
+  // Update status to success with record count
+  updateDuckDBStatus('success', `Connected (${recordCount.toLocaleString()} records)`);
 
   // Dispatch event to signal DuckDB is ready
   window.dispatchEvent(
@@ -94,11 +122,13 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initializeDuckDB().catch((error) => {
       console.error("Failed to initialize DuckDB:", error);
+      updateDuckDBStatus('error', 'Database connection failed');
     });
   });
 } else {
   initializeDuckDB().catch((error) => {
     console.error("Failed to initialize DuckDB:", error);
+    updateDuckDBStatus('error', 'Database connection failed');
   });
 }
 

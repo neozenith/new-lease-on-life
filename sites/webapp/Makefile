@@ -1,4 +1,4 @@
-PORT_NUMBER ?= 8002
+PORT_NUMBER ?= 8009
 THIS_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 THIS_DIR_NAME := $(notdir $(patsubst %/,%,$(THIS_DIR)))
 TEST_DIR := tests/$(THIS_DIR_NAME)
