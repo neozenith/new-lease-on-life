@@ -542,7 +542,8 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
   let rows;
 
   if (geospatialType === "LGA") {
-    // Direct LGA matching using geospatial_codes (LGA_CODE24)
+    // LGA matching with hyphen-delimited code support
+    // The geospatial_codes column may contain multiple codes separated by hyphens
     query = `
             SELECT
                 time_bucket,
@@ -554,7 +555,7 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
                 EXTRACT(QUARTER FROM time_bucket) as quarter
             FROM rental_sales.rental_sales
             WHERE geospatial_type = 'lga'
-                AND geospatial_codes = '${geospatialId}'
+                AND list_contains(string_split(geospatial_codes, '-'), '${geospatialId}')
                 AND data_type = '${dataType}'
                 AND statistic = 'median'
                 AND value IS NOT NULL
@@ -565,7 +566,8 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
     rows = result.toArray();
     console.log(`Found ${rows.length} records for ${geospatialType} ${geospatialId}`);
   } else if (geospatialType === "SUBURB") {
-    // Direct SUBURB matching using geospatial_codes (SAL_CODE21)
+    // SUBURB matching with hyphen-delimited code support
+    // The geospatial_codes column may contain multiple codes separated by hyphens
     query = `
             SELECT
                 time_bucket,
@@ -577,7 +579,7 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
                 EXTRACT(QUARTER FROM time_bucket) as quarter
             FROM rental_sales.rental_sales
             WHERE geospatial_type = 'suburb'
-                AND geospatial_codes = '${geospatialId}'
+                AND list_contains(string_split(geospatial_codes, '-'), '${geospatialId}')
                 AND data_type = '${dataType}'
                 AND statistic = 'median'
                 AND value IS NOT NULL

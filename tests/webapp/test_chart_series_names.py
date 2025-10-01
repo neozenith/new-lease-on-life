@@ -20,7 +20,7 @@ def test_series_names_format_for_suburb_data(page: Page, base_url: str):
     # Query data for Richmond-Burnley suburb which has bedroom data
     result = page.evaluate("""async () => {
         if (typeof queryRentalData === 'function') {
-            const data = await queryRentalData('SUBURB', 'Richmond-Burnley', 'rent');
+            const data = await queryRentalData('SUBURB', 'Richmond-Burnley', 'rental');
             return {
                 success: true,
                 seriesKeys: data.metadata.seriesKeys
