@@ -4,13 +4,11 @@
         bedrooms: 3
         bathrooms: 1
         parking: 2
-
         lat: -37.7724746
         lon: 144.8795149
 
 -   2A Kalang Rd, Glenroy, Vic 3046:
         link: https://www.realestate.com.au/property-townhouse-vic-glenroy-442440684
-
         lat: -37.7100322
         lon: 144.9220608
 
@@ -20,39 +18,41 @@
         bedrooms: 3
         bathrooms: 1
         parking: 2
-
         lat: -37.7470524
         lon: 144.9277315
 
--   8 Poble Walk, Avondale Heights, Vic 3034:
-        lat: -37.7641157
-        lon: 144.8623721
-
--   18 McDougall Drive, Footscray, Vic 3011:
-        link: https://www.realestate.com.au/property-townhouse-vic-footscray-442529692?sourcePage=rea%3Arent%3Asrp-map&sourceElement=listing-tile
-        rent: 650
-        bedrooms: 3
-        bathrooms: 2
-        parking: 2
-
-        lat: -37.7986978
-        lon: 144.8808131
 -   2A Grevillia Road, Pascoe Vale, Vic 3044:
         link: https://www.realestate.com.au/property-townhouse-vic-pascoe+vale-437065268
         rent: 600
         bedrooms: 3
         bathrooms: 2
         parking: 2
-
-
         lat: -37.7211929
         lon: 144.9261615
--   34 Teague Street, Niddrie, Vic 3042:
-        link: https://www.realestate.com.au/property-house-vic-niddrie-442639160
-        rent: 530
+
+-   7 Desmond Street, Maidstone, Vic 3012:
+        link: https://www.realestate.com.au/property-townhouse-vic-maidstone-442671188
+        rent: 620
+        bedrooms: 3
+        bathrooms: 2
+        parking: 2
+        lat: -37.7832958
+        lon: 144.8730644
+
+-   7/7-13 Kent Street, Ascot Vale, Vic 3032:
+        link: https://www.realestate.com.au/property-townhouse-vic-ascot+vale-442393560
+        rent: 700
         bedrooms: 3
         bathrooms: 1
         parking: 2
+        lat: -37.780978
+        lon: 144.931379
 
-        lat: -37.7436993
-        lon: 144.8878346
+-   1/15 Cromwell Street, Glenroy, Vic 3046:
+        link: https://www.realestate.com.au/property-townhouse-vic-glenroy-442643996
+        rent: 600
+        bedrooms: 3
+        bathrooms: 2
+        parking: 2
+        lat: -37.7024954
+        lon: 144.922322
