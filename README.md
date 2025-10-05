@@ -167,6 +167,13 @@ It also makes use of Google Directions API
 Thanks to Victoria Government:
 
 - [Public Transport Lines and Stops (GeoJSON)](https://discover.data.vic.gov.au/dataset/public-transport-lines-and-stops)
+- Median Rental Data
+    - [Quarterly Median Rent by LGA](https://discover.data.vic.gov.au/dataset/rental-report-quarterly-quarterly-median-rents-by-lga)
+    - [Quarterly Annual-Moving-Median Rent by Suburb](https://discover.data.vic.gov.au/dataset/rental-report-quarterly-moving-annual-rents-by-suburb)
+- Median Sales Data
+    - [Median Annual Sales by Suburb - House](https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-house-by-suburb-time-series)
+    - [Median Annual Sales by Suburb - Unit](https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-unit-by-suburb-time-series)
+    - [Median Annual Sales by Suburb - Vacant Land](https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-vacant-land-by-suburb-time-series)
 
 Thanks to Australian Bureau of Statistics:
 

@@ -30,14 +30,6 @@
         lat: -37.7211929
         lon: 144.9261615
 
--   7 Desmond Street, Maidstone, Vic 3012:
-        link: https://www.realestate.com.au/property-townhouse-vic-maidstone-442671188
-        rent: 620
-        bedrooms: 3
-        bathrooms: 2
-        parking: 2
-        lat: -37.7832958
-        lon: 144.8730644
 
 -   7/7-13 Kent Street, Ascot Vale, Vic 3032:
         link: https://www.realestate.com.au/property-townhouse-vic-ascot+vale-442393560
@@ -56,3 +48,12 @@
         parking: 2
         lat: -37.7024954
         lon: 144.922322
+
+-   1A Woodlands Avenue, Pascoe Vale South, Vic 3044:
+        link: https://www.realestate.com.au/property-house-vic-pascoe+vale+south-442248460
+        rent: 650
+        bedrooms: 3
+        bathrooms: 1
+        parking: 2
+        lat: -37.7497393
+        lon: 144.945759

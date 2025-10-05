@@ -1,5 +1,6 @@
 
-- file: 'data/originals/rental_sales/rental/Moving annual rent by suburb - December quarter 2024.xlsx'
+
+- file: 'data/originals/rental_sales/rental/Moving annual median rent by suburb and town - March quarter 2025.xlsx'
   data_type: rental
   data_frequency: quarterly # Moving annual by quarter
   data_granularity: suburb
@@ -48,7 +49,7 @@
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
 
-- file: 'data/originals/rental_sales/rental/Quarterly median rents by Local Government Area - December quarter 2024.xlsx'
+- file: 'data/originals/rental_sales/rental/Quarterly median rents by Local Government Area - March quarter 2025.xlsx'
   data_type: rental
   data_frequency: quarterly
   data_granularity: lga
