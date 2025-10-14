@@ -12,15 +12,6 @@
         lat: -37.7100322
         lon: 144.9220608
 
--   1/4 Cochrane Ct, Essendon, Vic 3040:
-        link: https://www.realestate.com.au/property-townhouse-vic-essendon-442596936
-        rent: 680
-        bedrooms: 3
-        bathrooms: 1
-        parking: 2
-        lat: -37.7470524
-        lon: 144.9277315
-
 -   2A Grevillia Road, Pascoe Vale, Vic 3044:
         link: https://www.realestate.com.au/property-townhouse-vic-pascoe+vale-437065268
         rent: 600

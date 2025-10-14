@@ -2,6 +2,12 @@
 
 Silly little GIS project to help me narrow down finding a rental suitable for me as I am moving to Melbourne.
 
+I don't really know the area so what better way to familiarise myself than to explore it through data?
+
+When looking at an area, how do I know if it is a bargain or overpriced? 
+
+It sure would be handy to have median rental and sales data for the last 10-20 years by suburb and LGA and dwelling type and size right? Thanks VicGov Open Data!
+
 ## Features
 
 - Geocode addresses from a YAML file using the Google Maps API
@@ -133,16 +139,6 @@ flowchart TD
     class MAPPINGS,COVERAGE webapp
 ```
 
-## Unused Scripts Analysis
-
-**Scripts NOT used in main Makefile pipeline:**
-- `test_lga_query.py` - Development/testing script
-- `process_realestate_candidates.py` - Listed in INDEX.md but not in current pipeline
-- `enhanced_polygon_coverage.py` - Generates webapp mapping files (indirect usage)
-- `create_js_mappings.py` - Generates JavaScript mappings for frontend (indirect usage)
-- `utils.py` - Library module imported by other scripts
-- `__init__.py` - Standard Python package file
-
 ## Requirements
 
 - Python 3.12 or higher
@@ -156,11 +152,11 @@ flowchart TD
 
 ## Acknowledgements
 
-This project uses the API for geocoding and isochrone calculation.
+This project uses the API for isochrone calculation.
 
 - [MapBox Isochrone](https://docs.mapbox.com/api/navigation/isochrone/)
 
-It also makes use of Google Directions API
+It also makes use of Google Directions API as well as Geocoding addresses.
 
 - [Google Maps Directions API (Legacy)](https://developers.google.com/maps/documentation/directions)
 
@@ -175,9 +171,11 @@ Thanks to Victoria Government:
     - [Median Annual Sales by Suburb - Unit](https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-unit-by-suburb-time-series)
     - [Median Annual Sales by Suburb - Vacant Land](https://discover.data.vic.gov.au/dataset/victorian-property-sales-report-median-vacant-land-by-suburb-time-series)
 
-Thanks to Australian Bureau of Statistics:
+Thanks to Australian Bureau of Statistics and their "Non-ABS Structures":
 
-- [Postcode Polygon Boundaries (SHP Files)](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files)
+- ["Suburbs and Localities (SAL)" Polygon Boundaries (SHP Files)](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files)
+- [LGA Polygon Boundaries (SHP Files)](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files)
+- ["Postal Areas (POA)" Polygon Boundaries (SHP Files)](https://www.abs.gov.au/statistics/standards/australian-statistical-geography-standard-asgs-edition-3/jul2021-jun2026/access-and-downloads/digital-boundary-files)
 
 Also thanks to GeoPandas for the easy assist manipulating all of these geospatial files
 

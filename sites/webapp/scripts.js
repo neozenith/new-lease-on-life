@@ -26,6 +26,80 @@ const GEOLOCATION_CONFIG = {
   maximumAge: 0,
 };
 
+// Loading step tracker for progress indication
+const loadingSteps = {
+  steps: [
+    { id: 'duckdb-wasm', name: 'Loading DuckDB library', status: 'pending' },
+    { id: 'duckdb-init', name: 'Initializing database', status: 'pending' },
+    { id: 'spatial-ext', name: 'Loading spatial extension', status: 'pending' },
+    { id: 'rental-db', name: 'Loading rental database', status: 'pending' },
+    { id: 'db-verify', name: 'Verifying connection', status: 'pending' },
+    { id: 'layers', name: 'Loading map layers', status: 'pending', substeps: { total: 12, completed: 0 } }
+  ],
+
+  getProgress() {
+    const completed = this.steps.filter(s => s.status === 'success').length;
+    return { completed, total: this.steps.length };
+  },
+
+  updateStep(id, status, errorMessage = null) {
+    const step = this.steps.find(s => s.id === id);
+    if (step) {
+      step.status = status;
+      if (errorMessage) {
+        step.errorMessage = errorMessage;
+      }
+      this.updateUI();
+    }
+  },
+
+  updateSubsteps(id, completed, total = null) {
+    const step = this.steps.find(s => s.id === id);
+    if (step && step.substeps) {
+      step.substeps.completed = completed;
+      if (total !== null) {
+        step.substeps.total = total;
+      }
+      this.updateUI();
+    }
+  },
+
+  updateUI() {
+    const { completed, total } = this.getProgress();
+    const currentStep = this.steps.find(s => s.status === 'loading');
+    const errorStep = this.steps.find(s => s.status === 'error');
+
+    // Check if all steps are complete
+    const allComplete = completed === total;
+
+    let message, status;
+
+    if (errorStep) {
+      // Show error status
+      message = `(${completed}/${total}) Error: ${errorStep.errorMessage || errorStep.name}`;
+      status = 'error';
+    } else if (allComplete) {
+      // All steps complete - show success with record count from last step
+      const dbVerifyStep = this.steps.find(s => s.id === 'db-verify');
+      message = dbVerifyStep.successMessage || `Connected (${completed}/${total})`;
+      status = 'success';
+    } else if (currentStep) {
+      // Show current step progress
+      message = `(${completed}/${total}) ${currentStep.name}`;
+      if (currentStep.substeps && currentStep.substeps.total > 0) {
+        message += ` (${currentStep.substeps.completed}/${currentStep.substeps.total})`;
+      }
+      status = 'loading';
+    } else {
+      // Default loading message
+      message = `(${completed}/${total}) Loading...`;
+      status = 'loading';
+    }
+
+    updateDuckDBStatus(status, message);
+  }
+};
+
 // Helper function to update DuckDB status indicator
 function updateDuckDBStatus(status, message) {
   const statusIcon = document.getElementById('duckdb-status-icon');
@@ -47,7 +121,7 @@ function updateDuckDBStatus(status, message) {
 // Initialize DuckDB WASM
 async function initializeDuckDB() {
   console.log("Initializing DuckDB WASM...");
-  updateDuckDBStatus('loading', 'Loading DuckDB library...');
+  loadingSteps.updateStep('duckdb-wasm', 'loading');
 
   // Wait for duckdb module to be available
   let retries = 20;
@@ -57,13 +131,14 @@ async function initializeDuckDB() {
   }
 
   if (typeof window.duckdb === "undefined") {
-    updateDuckDBStatus('error', 'Failed to load DuckDB library');
+    loadingSteps.updateStep('duckdb-wasm', 'error', 'Failed to load DuckDB library');
     throw new Error("DuckDB WASM module not loaded. Make sure the ES module import completed.");
   }
 
   const duckdb = window.duckdb;
   console.log("DuckDB module loaded");
-  updateDuckDBStatus('loading', 'Initializing database...');
+  loadingSteps.updateStep('duckdb-wasm', 'success');
+  loadingSteps.updateStep('duckdb-init', 'loading');
 
   // Create worker and database instance using createWorker helper
   const logger = new duckdb.ConsoleLogger(duckdb.LogLevel.WARNING);
@@ -75,7 +150,8 @@ async function initializeDuckDB() {
   const connection = await db.connect();
 
   console.log("DuckDB initialized successfully");
-  updateDuckDBStatus('loading', 'Loading spatial extension...');
+  loadingSteps.updateStep('duckdb-init', 'success');
+  loadingSteps.updateStep('spatial-ext', 'loading');
 
   // Install and load the spatial extension
   try {
@@ -90,26 +166,30 @@ async function initializeDuckDB() {
       console.log("Spatial extension loaded successfully (already installed)");
     } catch (e) {
       console.warn("Could not load spatial extension:", e);
+      loadingSteps.updateStep('spatial-ext', 'error', 'Failed to load spatial extension');
+      throw e;
     }
   }
 
-  updateDuckDBStatus('loading', 'Loading rental database...');
+  loadingSteps.updateStep('spatial-ext', 'success');
+  loadingSteps.updateStep('rental-db', 'loading');
 
   // Load the rental sales database
   console.log("Loading rental sales database...");
   const response = await fetch("./data/rental_sales.duckdb");
   if (!response.ok) {
-    updateDuckDBStatus('error', 'Failed to fetch database file');
+    loadingSteps.updateStep('rental-db', 'error', 'Failed to fetch database file');
     throw new Error(`Failed to fetch rental_sales.duckdb: ${response.status} ${response.statusText}`);
   }
 
-  updateDuckDBStatus('loading', 'Connecting to database...');
   const dbBuffer = await response.arrayBuffer();
   await db.registerFileBuffer("rental_sales.duckdb", new Uint8Array(dbBuffer));
   await connection.query("ATTACH 'rental_sales.duckdb' AS rental_sales;");
 
+  loadingSteps.updateStep('rental-db', 'success');
+  loadingSteps.updateStep('db-verify', 'loading');
+
   // Test the connection
-  updateDuckDBStatus('loading', 'Verifying connection...');
   const testResult = await connection.query("SELECT COUNT(*) as total_records FROM rental_sales.rental_sales;");
   const recordCount = testResult.toArray()[0].total_records;
   console.log(`Successfully connected to rental sales database with ${recordCount} records`);
@@ -118,8 +198,12 @@ async function initializeDuckDB() {
   window.duckdbConnection = connection;
   window.duckdbDatabase = db;
 
-  // Update status to success with record count
-  updateDuckDBStatus('success', `Connected (${recordCount.toLocaleString()} records)`);
+  // Store success message with record count for final display
+  const dbVerifyStep = loadingSteps.steps.find(s => s.id === 'db-verify');
+  if (dbVerifyStep) {
+    dbVerifyStep.successMessage = `Connected (${recordCount.toLocaleString()} records)`;
+  }
+  loadingSteps.updateStep('db-verify', 'success');
 
   // Dispatch event to signal DuckDB is ready
   window.dispatchEvent(
@@ -136,13 +220,21 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     initializeDuckDB().catch((error) => {
       console.error("Failed to initialize DuckDB:", error);
-      updateDuckDBStatus('error', 'Database connection failed');
+      // Find the first pending or loading step and mark it as error
+      const failedStep = loadingSteps.steps.find(s => s.status === 'loading' || s.status === 'pending');
+      if (failedStep) {
+        loadingSteps.updateStep(failedStep.id, 'error', error.message || 'Database initialization failed');
+      }
     });
   });
 } else {
   initializeDuckDB().catch((error) => {
     console.error("Failed to initialize DuckDB:", error);
-    updateDuckDBStatus('error', 'Database connection failed');
+    // Find the first pending or loading step and mark it as error
+    const failedStep = loadingSteps.steps.find(s => s.status === 'loading' || s.status === 'pending');
+    if (failedStep) {
+      loadingSteps.updateStep(failedStep.id, 'error', error.message || 'Database initialization failed');
+    }
   });
 }
 
@@ -633,14 +725,8 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
     }
   });
 
-  // Create series keys from unique combinations
-  const seriesKeys = [];
-
-  // Add "All Properties" series (aggregated across all dwelling types and bedrooms)
-  seriesKeys.push("All Properties");
-
-  // Add all unique combinations found in the data
-  seriesKeys.push(...Array.from(uniqueCombinations).sort());
+  // Create series keys from unique combinations found in the data
+  const seriesKeys = Array.from(uniqueCombinations).sort();
 
   const uniqueDates = [
     ...new Set(
@@ -714,36 +800,6 @@ async function queryRentalData(geospatialType, geospatialId, dataType = "rent") 
       // Add to the appropriate series
       if (data.series[seriesKey]) {
         data.series[seriesKey][dateIndex] = Math.round(value);
-      }
-    }
-  });
-
-  // Second pass: Calculate "All Properties" aggregated values
-  uniqueDates.forEach((date, dateIndex) => {
-    const rowsForDate = rows.filter((row) => {
-      const year = safeNumber(row.year);
-      const quarter = safeNumber(row.quarter);
-      const monthByQuarter = { 1: "03", 2: "06", 3: "09", 4: "12" };
-      const rowDateLabel = `${year}-${monthByQuarter[quarter]}`;
-      return rowDateLabel === date;
-    });
-
-    if (rowsForDate.length > 0) {
-      // Calculate simple average across all dwelling types and bedrooms
-      let totalValue = 0;
-      let count = 0;
-
-      rowsForDate.forEach((row) => {
-        const value = safeNumber(row.value);
-
-        if (value !== null && value !== undefined) {
-          totalValue += value;
-          count++;
-        }
-      });
-
-      if (count > 0) {
-        data.series["All Properties"][dateIndex] = Math.round(totalValue / count);
       }
     }
   });
@@ -844,14 +900,6 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
       return;
     }
 
-    // Determine the appropriate label and color
-    const areaTypeLabel =
-      geospatialType === "LGA"
-        ? "LGA"
-        : geospatialType === "SUBURB"
-          ? "Suburb"
-          : geospatialType;
-
     const chartTitle =
       chartType === "rental"
         ? `${areaName} - Rental Trends`
@@ -861,10 +909,16 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
 
     // Define colors for bedroom+dwelling combinations
     const getSeriesColor = (seriesKey) => {
-      // All Properties gets prominent blue
-      if (seriesKey === "All Properties") return "#1976D2";
+      // "All" (all-all dwelling_class) gets prominent blue
+      if (seriesKey === "All") return "#1976D2";
 
-      // House series use green tones
+      // "House" (house-all dwelling_class) - aggregate houses
+      if (seriesKey === "House") return "#2E7D32";
+
+      // "Unit" (unit-all dwelling_class) - aggregate units
+      if (seriesKey === "Unit") return "#E65100";
+
+      // Specific house bedroom combinations use green tones
       if (seriesKey.startsWith("House-")) {
         if (seriesKey.includes("-1")) return "#A5D6A7";
         if (seriesKey.includes("-2")) return "#81C784";
@@ -874,7 +928,7 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
         return "#4CAF50"; // default green
       }
 
-      // Unit series use orange tones
+      // Specific unit bedroom combinations use orange tones
       if (seriesKey.startsWith("Unit-")) {
         if (seriesKey.includes("-1")) return "#FFCC80";
         if (seriesKey.includes("-2")) return "#FFB74D";
@@ -889,11 +943,13 @@ async function createAreaChart(containerId, geospatialType, geospatialId, chartT
     };
 
     const getSeriesWidth = (seriesKey) => {
-      return seriesKey === "All Properties" ? 3 : 2;
+      // Make aggregate series (All, House, Unit) more prominent
+      return (seriesKey === "All" || seriesKey === "House" || seriesKey === "Unit") ? 3 : 2;
     };
 
     const getMarkerSize = (seriesKey) => {
-      return seriesKey === "All Properties" ? 6 : 4;
+      // Make aggregate series (All, House, Unit) more prominent
+      return (seriesKey === "All" || seriesKey === "House" || seriesKey === "Unit") ? 6 : 4;
     };
 
     // Create traces for each bedroom+dwelling combination
@@ -1509,13 +1565,20 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000, fnName = '
 window.addEventListener("duckdbReady", async () => {
   console.log("DuckDB ready, loading Parquet layers from configuration...");
 
+  // Mark layer loading step as loading
+  loadingSteps.updateStep('layers', 'loading');
+
   // Load Parquet layer configuration
   try {
     const parquetConfigResponse = await fetch("./parquet_layers_config.json");
     if (!parquetConfigResponse.ok) {
+      loadingSteps.updateStep('layers', 'error', 'Failed to load layer configuration');
       throw new Error(`Failed to load Parquet layer configuration: ${parquetConfigResponse.status}`);
     }
     const parquetConfig = await parquetConfigResponse.json();
+
+    // Set total substeps based on number of layers in config
+    loadingSteps.updateSubsteps('layers', 0, parquetConfig.layers.length);
 
     // Load all Parquet layers in parallel with retry logic for robustness
     // Load layers but DON'T add to deck yet - we need to preserve order
@@ -1537,10 +1600,24 @@ window.addEventListener("duckdbReady", async () => {
       )
         .then((layer) => {
           console.log(`✓ ${layerConfig.displayName} loaded successfully`);
+
+          // Update layer loading substeps - count successful loads
+          const layersStep = loadingSteps.steps.find(s => s.id === 'layers');
+          if (layersStep && layersStep.substeps) {
+            loadingSteps.updateSubsteps('layers', layersStep.substeps.completed + 1);
+          }
+
           return { layer, index, config: layerConfig };
         })
         .catch((error) => {
           console.error(`✗ Failed to load ${layerConfig.displayName} after all retry attempts:`, error);
+
+          // Still increment substeps counter even on failure (to show progress)
+          const layersStep = loadingSteps.steps.find(s => s.id === 'layers');
+          if (layersStep && layersStep.substeps) {
+            loadingSteps.updateSubsteps('layers', layersStep.substeps.completed + 1);
+          }
+
           return { layer: null, index, config: layerConfig, error };
         });
     });
@@ -1583,9 +1660,17 @@ window.addEventListener("duckdbReady", async () => {
       }
     }
 
-    console.log("All Parquet layers loading complete");
+    // Mark layers step as complete
+    if (loadedLayers.length > 0) {
+      loadingSteps.updateStep('layers', 'success');
+      console.log("All Parquet layers loading complete");
+    } else {
+      loadingSteps.updateStep('layers', 'error', 'No layers could be loaded');
+      console.error("Failed to load any Parquet layers");
+    }
   } catch (error) {
     console.error("Failed to load Parquet layer configuration:", error);
+    loadingSteps.updateStep('layers', 'error', error.message || 'Layer loading failed');
   }
 }, { once: true });
 
