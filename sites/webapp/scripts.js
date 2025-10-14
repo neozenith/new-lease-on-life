@@ -1571,6 +1571,28 @@ async function addParquetLayerToDeck(layerId, parquetPath, layerOptions = {}) {
   return layer;
 }
 
+// Retry utility function with exponential backoff
+async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000, fnName = 'operation') {
+  let lastError;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff: 1s, 2s, 4s
+        console.warn(`${fnName} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  console.error(`${fnName} failed after ${maxRetries + 1} attempts:`, lastError);
+  throw lastError;
+}
+
 // Load the layer configuration and initialize layers
 fetch("./layers_config.json")
   .then((response) => response.json())
@@ -1594,22 +1616,73 @@ fetch("./layers_config.json")
         }
         const parquetConfig = await parquetConfigResponse.json();
 
-        // Load each Parquet layer from configuration
-        for (const layerConfig of parquetConfig.layers) {
-          try {
-            // Add display name to layerDisplayNames object for UI
-            layerDisplayNames[layerConfig.id] = layerConfig.displayName;
+        // Load all Parquet layers in parallel with retry logic for robustness
+        // Load layers but DON'T add to deck yet - we need to preserve order
+        const layerLoadPromises = parquetConfig.layers.map((layerConfig, index) => {
+          // Add display name to layerDisplayNames object for UI
+          layerDisplayNames[layerConfig.id] = layerConfig.displayName;
 
-            await addParquetLayerToDeck(
+          // Wrap layer loading with retry logic (3 attempts with exponential backoff)
+          // Use createParquetLayer instead of addParquetLayerToDeck to avoid immediate addition
+          return retryWithBackoff(
+            () => createParquetLayer(
               layerConfig.id,
               layerConfig.parquetPath,
               layerConfig.options
-            );
-            console.log(`${layerConfig.displayName} added successfully`);
-          } catch (error) {
-            console.error(`Failed to add ${layerConfig.displayName}:`, error);
+            ),
+            3, // max retries
+            1000, // base delay (1 second)
+            `Loading ${layerConfig.displayName}`
+          )
+            .then((layer) => {
+              console.log(`✓ ${layerConfig.displayName} loaded successfully`);
+              return { layer, index, config: layerConfig };
+            })
+            .catch((error) => {
+              console.error(`✗ Failed to load ${layerConfig.displayName} after all retry attempts:`, error);
+              return { layer: null, index, config: layerConfig, error };
+            });
+        });
+
+        // Wait for all layers to load (using allSettled so one failure doesn't stop others)
+        const results = await Promise.allSettled(layerLoadPromises);
+
+        // Extract successful layers and sort by original config order to preserve layer rendering order
+        const loadedLayers = results
+          .filter(result => result.status === 'fulfilled' && result.value.layer !== null)
+          .map(result => result.value)
+          .sort((a, b) => a.index - b.index) // Sort by original config order
+          .map(item => item.layer);
+
+        console.log(`Loaded ${loadedLayers.length}/${parquetConfig.layers.length} Parquet layers successfully`);
+
+        // Add all loaded layers to deck in correct order (single batch update)
+        if (loadedLayers.length > 0) {
+          const currentLayers = window.deckgl.props.layers || [];
+
+          // Remove any existing Parquet layers to avoid duplicates
+          const parquetLayerIds = new Set(parquetConfig.layers.map(l => l.id));
+          const filteredLayers = currentLayers.filter(l => !parquetLayerIds.has(l.id));
+
+          // Add all new Parquet layers in correct order
+          window.deckgl.setProps({ layers: [...filteredLayers, ...loadedLayers] });
+          console.log("All Parquet layers added to deck in config order");
+
+          // Initialize visibility states for all loaded layers
+          loadedLayers.forEach(layer => {
+            if (layerVisibility[layer.id] === undefined) {
+              const configLayer = parquetConfig.layers.find(l => l.id === layer.id);
+              layerVisibility[layer.id] = configLayer?.options?.visible !== false;
+            }
+          });
+
+          // Update layer toggles if panel is expanded
+          if (layersSection && layersSection.classList.contains("expanded")) {
+            populateLayerToggles();
           }
         }
+
+        console.log("All Parquet layers loading complete");
       } catch (error) {
         console.error("Failed to load Parquet layer configuration:", error);
       }
