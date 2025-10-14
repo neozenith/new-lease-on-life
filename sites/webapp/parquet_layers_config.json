@@ -1,0 +1,46 @@
+{
+  "layers": [
+    {
+      "id": "isochrones-5min-parquet",
+      "displayName": "5-minute Walking (Parquet)",
+      "parquetPath": "./data/5.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": false,
+        "getFillColor": [0, 200, 100, 20],
+        "getLineColor": [0, 150, 75, 200],
+        "getLineWidth": 1,
+        "lineWidthMinPixels": 1,
+        "autoHighlight": false,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
+    },
+    {
+      "id": "isochrones-15min-parquet",
+      "displayName": "15-minute Walking (Parquet)",
+      "parquetPath": "./data/15.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": false,
+        "getFillColor": [0, 150, 200, 20],
+        "getLineColor": [0, 100, 150, 200],
+        "getLineWidth": 1,
+        "lineWidthMinPixels": 1,
+        "autoHighlight": false,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
+    }
+  ]
+}

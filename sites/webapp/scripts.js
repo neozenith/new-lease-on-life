@@ -1565,34 +1565,37 @@ fetch("./layers_config.json")
     console.log("Layer configuration loaded successfully");
     console.log(`Loaded ${layers.length} layers from config`);
 
-    // Add Parquet-based 15-minute isochrone layer after DuckDB is ready
-    // This will be added alongside the existing GeoJSON layer for comparison
+    // Add Parquet-based isochrone layers after DuckDB is ready
+    // These will be added alongside the existing GeoJSON layers for comparison
     window.addEventListener("duckdbReady", async () => {
-      console.log("DuckDB ready, loading Parquet layer...");
+      console.log("DuckDB ready, loading Parquet layers from configuration...");
+
+      // Load Parquet layer configuration
       try {
-        await addParquetLayerToDeck(
-          "isochrones-15min-parquet",
-          "./data/15.parquet",
-          {
-            filled: true,
-            stroked: true,
-            extruded: false,
-            pickable: false,
-            getFillColor: config.colors?.fill15min || [0, 150, 200, 20],
-            getLineColor: config.colors?.line15min || [0, 100, 150, 200],
-            getLineWidth: 1,
-            lineWidthMinPixels: 1,
-            autoHighlight: false,
-            highlightColor: config.colors?.hover || [255, 150, 0, 120],
-            visible: false, // Start hidden so user can toggle it on
-            transitions: {
-              getFillColor: 200
-            }
+        const parquetConfigResponse = await fetch("./parquet_layers_config.json");
+        if (!parquetConfigResponse.ok) {
+          throw new Error(`Failed to load Parquet layer configuration: ${parquetConfigResponse.status}`);
+        }
+        const parquetConfig = await parquetConfigResponse.json();
+
+        // Load each Parquet layer from configuration
+        for (const layerConfig of parquetConfig.layers) {
+          try {
+            // Add display name to layerDisplayNames object for UI
+            layerDisplayNames[layerConfig.id] = layerConfig.displayName;
+
+            await addParquetLayerToDeck(
+              layerConfig.id,
+              layerConfig.parquetPath,
+              layerConfig.options
+            );
+            console.log(`${layerConfig.displayName} added successfully`);
+          } catch (error) {
+            console.error(`Failed to add ${layerConfig.displayName}:`, error);
           }
-        );
-        console.log("Parquet layer added successfully");
+        }
       } catch (error) {
-        console.error("Failed to add Parquet layer:", error);
+        console.error("Failed to load Parquet layer configuration:", error);
       }
     }, { once: true });
   })
@@ -1801,7 +1804,6 @@ const layerDisplayNames = {
   "commute-tier-hulls-tram": "Tram Commute Zones",
   "isochrones-5min": "5-minute Walking",
   "isochrones-15min": "15-minute Walking",
-  "isochrones-15min-parquet": "15-minute Walking (Parquet)",
   "lga-boundaries": "LGA Boundaries",
   "suburbs-sal": "Suburbs and Localities (SAL)",
   "postcodes-with-trams-trains": "Serviced Postcodes",
@@ -1810,6 +1812,7 @@ const layerDisplayNames = {
   "ptv-stops-tram": "Tram Stops",
   "ptv-stops-train": "Train Stops",
   "real-estate-candidates": "Property Candidates",
+  // Parquet layer display names are loaded dynamically from parquet_layers_config.json
 };
 
 // Function to populate layer toggles
