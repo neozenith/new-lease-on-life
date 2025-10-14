@@ -513,13 +513,13 @@ function getItemType(layer) {
     return "postcodes";
   }
 
-  // Check for tram stops
-  if (layerId === "ptv-stops-tram") {
+  // Check for tram stops (both GeoJSON and Parquet versions)
+  if (layerId === "ptv-stops-tram" || layerId === "ptv-stops-tram-parquet") {
     return "ptv-stops-tram";
   }
 
-  // Check for train stops
-  if (layerId === "ptv-stops-train") {
+  // Check for train stops (both GeoJSON and Parquet versions)
+  if (layerId === "ptv-stops-train" || layerId === "ptv-stops-train-parquet") {
     return "ptv-stops-train";
   }
 

@@ -41,6 +41,92 @@
           "getFillColor": 200
         }
       }
+    },
+    {
+      "id": "ptv-stops-tram-parquet",
+      "displayName": "Tram Stops (Parquet)",
+      "parquetPath": "./data/stops_with_commute_times_metro_tram.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": true,
+        "getFillColor": [255, 150, 50, 200],
+        "getLineColor": [255, 150, 50, 150],
+        "getPointRadius": 2,
+        "pointRadiusMinPixels": 2,
+        "pointRadiusMaxPixels": 8,
+        "autoHighlight": true,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
+    },
+    {
+      "id": "ptv-stops-train-parquet",
+      "displayName": "Train Stops (Parquet)",
+      "parquetPath": "./data/stops_with_commute_times_metro_train.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": true,
+        "getFillColor": [50, 200, 50, 200],
+        "getLineColor": [50, 200, 50, 150],
+        "getPointRadius": 2,
+        "pointRadiusMinPixels": 2,
+        "pointRadiusMaxPixels": 8,
+        "autoHighlight": true,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
+    },
+    {
+      "id": "ptv-lines-tram-parquet",
+      "displayName": "Tram Lines (Parquet)",
+      "parquetPath": "./data/lines_within_union_metro_tram.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": true,
+        "getFillColor": [255, 150, 50, 200],
+        "getLineColor": [255, 150, 50, 150],
+        "getLineWidth": 2,
+        "lineWidthMinPixels": 1,
+        "autoHighlight": true,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
+    },
+    {
+      "id": "ptv-lines-train-parquet",
+      "displayName": "Train Lines (Parquet)",
+      "parquetPath": "./data/lines_within_union_metro_train.parquet",
+      "options": {
+        "filled": true,
+        "stroked": true,
+        "extruded": false,
+        "pickable": true,
+        "getFillColor": [50, 200, 50, 200],
+        "getLineColor": [50, 200, 50, 150],
+        "getLineWidth": 2,
+        "lineWidthMinPixels": 1,
+        "autoHighlight": true,
+        "highlightColor": [255, 150, 0, 120],
+        "visible": false,
+        "transitions": {
+          "getFillColor": 200
+        }
+      }
     }
   ]
 }
