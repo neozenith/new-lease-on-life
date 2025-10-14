@@ -487,24 +487,25 @@ const maxSelectionsByType = MAX_SELECTIONS_BY_TYPE;
 function getItemType(layer) {
   const layerId = layer.id;
 
-  // Check for real estate candidates
-  if (layerId === "real-estate-candidates") {
+  // Check for real estate candidates (both GeoJSON and Parquet versions)
+  if (layerId === "real-estate-candidates" || layerId === "real-estate-candidates-parquet") {
     return "real-estate-candidates";
   }
 
-  // Check for LGA boundaries
-  if (layerId === "lga-boundaries") {
+  // Check for LGA boundaries (both GeoJSON and Parquet versions)
+  if (layerId === "lga-boundaries" || layerId === "lga-boundaries-parquet") {
     return "lga";
   }
 
-  // Check for SAL boundaries
-  if (layerId === "suburbs-sal") {
+  // Check for SAL boundaries (both GeoJSON and Parquet versions)
+  if (layerId === "suburbs-sal" || layerId === "suburbs-sal-parquet") {
     return "sal";
   }
 
-  // Check for postcodes (matching the actual layer ID from config)
+  // Check for postcodes (both GeoJSON and Parquet versions)
   if (
     layerId === "postcodes-with-trams-trains" ||
+    layerId === "postcodes-with-trams-trains-parquet" ||
     layerId === "selected_postcodes" ||
     layerId === "unioned_postcodes" ||
     layerId === "postcodes-selected" ||
@@ -1510,11 +1511,26 @@ async function createParquetLayer(layerId, parquetPath, layerOptions = {}) {
     console.log(`Creating Parquet layer: ${layerId}`);
     const geojson = await loadParquetAsGeoJSON(parquetPath);
 
+    // Process layer options
+    const processedOptions = { ...layerOptions };
+
+    // Special handling for real-estate-candidates layer with dynamic color extraction
+    if (layerId === "real-estate-candidates-parquet" && processedOptions.getFillColor === "ptv_walkability_colour") {
+      console.log("Applying dynamic color extraction for walkability colors");
+
+      // Convert getFillColor from property name to function that extracts hex color
+      processedOptions.getFillColor = (feature) => {
+        const props = feature.properties || {};
+        const hex = props.ptv_walkability_colour;
+        return hexToRgbA(hex) || COLORS.DEFAULT_FILL;
+      };
+    }
+
     // Create layer with the loaded GeoJSON data
     const layer = new GeoJsonLayer({
       id: layerId,
       data: geojson,
-      ...layerOptions
+      ...processedOptions
     });
 
     console.log(`Successfully created Parquet layer: ${layerId} with ${geojson.features.length} features`);
