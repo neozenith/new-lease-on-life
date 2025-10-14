@@ -1,10 +1,6 @@
 // Destructure deck.gl components
 const { DeckGL, GeoJsonLayer, ScatterplotLayer } = deck;
 
-// Load layer configuration
-let layerConfig = null;
-let colors = {};
-
 // Application Constants
 const COMMUTE_TIME_MIN = 100;
 const COMMUTE_TIME_RANGE = 300;
@@ -177,17 +173,6 @@ function hexToRgbA(hex) {
   return null;
 }
 
-// Function to resolve color references in the config
-function resolveColorReference(value, colors) {
-  if (typeof value === "string") {
-    if (value.startsWith("color:")) {
-      const colorKey = value.substring(6);
-      return colors[colorKey] || COLORS.DEFAULT_FILL;
-    }
-  }
-  return value;
-}
-
 // Function to load GeoJSON from Parquet file using DuckDB
 async function loadParquetAsGeoJSON(parquetPath) {
   if (!window.duckdbConnection) {
@@ -256,73 +241,6 @@ async function loadParquetAsGeoJSON(parquetPath) {
   };
 
   return geojson;
-}
-
-// Function to create layers from config
-function createLayersFromConfig(config) {
-  if (!config || !config.layers) return [];
-
-  colors = config.colors || {};
-
-  return config.layers.map((layerConfig) => {
-    // Resolve color references
-    const processedConfig = { ...layerConfig };
-    const layerType = layerConfig.type || "GeoJsonLayer";
-
-    // Handle different layer types
-    if (layerType === "GeoJsonLayer" && processedConfig.id === "real-estate-candidates") {
-      // Special handling for real estate candidates layer
-      if (typeof processedConfig.data === "string" && processedConfig.data.endsWith(".geojson")) {
-        // Load GeoJSON and convert to points array
-        fetch(processedConfig.data)
-          .then((response) => response.json())
-          .then((geojson) => {
-            const expanded_features = geojson.features.map((feature) => ({
-              ...feature.properties,
-              coordinates: feature.geometry.coordinates,
-              geometry: feature.geometry,
-            }));
-            // Update the layer with processed data
-            const updatedConfig = { ...processedConfig };
-            updatedConfig.data = expanded_features; // Set the results of loading the datafile to the processed features
-
-            // Handle color extraction from property
-            if (updatedConfig.getFillColor === "ptv_walkability_colour") {
-              updatedConfig.getFillColor = (d) => {
-                // Sets this property to a function that extracts color from each data point
-                const hex = d.ptv_walkability_colour;
-                return hexToRgbA(hex) || COLORS.DEFAULT_FILL;
-              };
-            }
-
-            // Create new GeoJsonLayer with updated data
-            const newLayer = new GeoJsonLayer(updatedConfig);
-            // Update the deck with the new layer
-            const currentLayers = window.deckgl.props.layers || [];
-            const filteredLayers = currentLayers.filter((l) => l.id !== updatedConfig.id);
-            window.deckgl.setProps({ layers: [...filteredLayers, newLayer] });
-          });
-
-        // Return placeholder layer while loading
-        return new GeoJsonLayer({
-          ...processedConfig,
-          data: [],
-        });
-      }
-    }
-
-    // Standard color resolution for other properties
-    ["getFillColor", "getLineColor", "highlightColor"].forEach((prop) => {
-      if (processedConfig[prop]) {
-        processedConfig[prop] = resolveColorReference(processedConfig[prop], colors);
-      }
-    });
-
-    // Remove the type property as it's not needed by deck.gl
-    delete processedConfig.type;
-
-    return new GeoJsonLayer(processedConfig);
-  });
 }
 
 // Color scale for commute time hulls (gradient based on transit time)
@@ -487,40 +405,33 @@ const maxSelectionsByType = MAX_SELECTIONS_BY_TYPE;
 function getItemType(layer) {
   const layerId = layer.id;
 
-  // Check for real estate candidates (both GeoJSON and Parquet versions)
-  if (layerId === "real-estate-candidates" || layerId === "real-estate-candidates-parquet") {
+  // Check for real estate candidates (Parquet version only)
+  if (layerId === "real-estate-candidates-parquet") {
     return "real-estate-candidates";
   }
 
-  // Check for LGA boundaries (both GeoJSON and Parquet versions)
-  if (layerId === "lga-boundaries" || layerId === "lga-boundaries-parquet") {
+  // Check for LGA boundaries (Parquet version only)
+  if (layerId === "lga-boundaries-parquet") {
     return "lga";
   }
 
-  // Check for SAL boundaries (both GeoJSON and Parquet versions)
-  if (layerId === "suburbs-sal" || layerId === "suburbs-sal-parquet") {
+  // Check for SAL boundaries (Parquet version only)
+  if (layerId === "suburbs-sal-parquet") {
     return "sal";
   }
 
-  // Check for postcodes (both GeoJSON and Parquet versions)
-  if (
-    layerId === "postcodes-with-trams-trains" ||
-    layerId === "postcodes-with-trams-trains-parquet" ||
-    layerId === "selected_postcodes" ||
-    layerId === "unioned_postcodes" ||
-    layerId === "postcodes-selected" ||
-    layerId === "postcodes-unioned"
-  ) {
+  // Check for postcodes (Parquet version only)
+  if (layerId === "postcodes-with-trams-trains-parquet") {
     return "postcodes";
   }
 
-  // Check for tram stops (both GeoJSON and Parquet versions)
-  if (layerId === "ptv-stops-tram" || layerId === "ptv-stops-tram-parquet") {
+  // Check for tram stops (Parquet version only)
+  if (layerId === "ptv-stops-tram-parquet") {
     return "ptv-stops-tram";
   }
 
-  // Check for train stops (both GeoJSON and Parquet versions)
-  if (layerId === "ptv-stops-train" || layerId === "ptv-stops-train-parquet") {
+  // Check for train stops (Parquet version only)
+  if (layerId === "ptv-stops-train-parquet") {
     return "ptv-stops-train";
   }
 
@@ -1593,105 +1504,90 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000, fnName = '
   throw lastError;
 }
 
-// Load the layer configuration and initialize layers
-fetch("./layers_config.json")
-  .then((response) => response.json())
-  .then((config) => {
-    layerConfig = config;
-    const layers = createLayersFromConfig(config);
-    window.deckgl.setProps({ layers });
-    console.log("Layer configuration loaded successfully");
-    console.log(`Loaded ${layers.length} layers from config`);
+// Load Parquet layers after DuckDB is ready
+// Wait for DuckDB to initialize before loading any layers
+window.addEventListener("duckdbReady", async () => {
+  console.log("DuckDB ready, loading Parquet layers from configuration...");
 
-    // Add Parquet-based isochrone layers after DuckDB is ready
-    // These will be added alongside the existing GeoJSON layers for comparison
-    window.addEventListener("duckdbReady", async () => {
-      console.log("DuckDB ready, loading Parquet layers from configuration...");
+  // Load Parquet layer configuration
+  try {
+    const parquetConfigResponse = await fetch("./parquet_layers_config.json");
+    if (!parquetConfigResponse.ok) {
+      throw new Error(`Failed to load Parquet layer configuration: ${parquetConfigResponse.status}`);
+    }
+    const parquetConfig = await parquetConfigResponse.json();
 
-      // Load Parquet layer configuration
-      try {
-        const parquetConfigResponse = await fetch("./parquet_layers_config.json");
-        if (!parquetConfigResponse.ok) {
-          throw new Error(`Failed to load Parquet layer configuration: ${parquetConfigResponse.status}`);
-        }
-        const parquetConfig = await parquetConfigResponse.json();
+    // Load all Parquet layers in parallel with retry logic for robustness
+    // Load layers but DON'T add to deck yet - we need to preserve order
+    const layerLoadPromises = parquetConfig.layers.map((layerConfig, index) => {
+      // Add display name to layerDisplayNames object for UI
+      layerDisplayNames[layerConfig.id] = layerConfig.displayName;
 
-        // Load all Parquet layers in parallel with retry logic for robustness
-        // Load layers but DON'T add to deck yet - we need to preserve order
-        const layerLoadPromises = parquetConfig.layers.map((layerConfig, index) => {
-          // Add display name to layerDisplayNames object for UI
-          layerDisplayNames[layerConfig.id] = layerConfig.displayName;
-
-          // Wrap layer loading with retry logic (3 attempts with exponential backoff)
-          // Use createParquetLayer instead of addParquetLayerToDeck to avoid immediate addition
-          return retryWithBackoff(
-            () => createParquetLayer(
-              layerConfig.id,
-              layerConfig.parquetPath,
-              layerConfig.options
-            ),
-            3, // max retries
-            1000, // base delay (1 second)
-            `Loading ${layerConfig.displayName}`
-          )
-            .then((layer) => {
-              console.log(`✓ ${layerConfig.displayName} loaded successfully`);
-              return { layer, index, config: layerConfig };
-            })
-            .catch((error) => {
-              console.error(`✗ Failed to load ${layerConfig.displayName} after all retry attempts:`, error);
-              return { layer: null, index, config: layerConfig, error };
-            });
+      // Wrap layer loading with retry logic (3 attempts with exponential backoff)
+      // Use createParquetLayer instead of addParquetLayerToDeck to avoid immediate addition
+      return retryWithBackoff(
+        () => createParquetLayer(
+          layerConfig.id,
+          layerConfig.parquetPath,
+          layerConfig.options
+        ),
+        3, // max retries
+        1000, // base delay (1 second)
+        `Loading ${layerConfig.displayName}`
+      )
+        .then((layer) => {
+          console.log(`✓ ${layerConfig.displayName} loaded successfully`);
+          return { layer, index, config: layerConfig };
+        })
+        .catch((error) => {
+          console.error(`✗ Failed to load ${layerConfig.displayName} after all retry attempts:`, error);
+          return { layer: null, index, config: layerConfig, error };
         });
+    });
 
-        // Wait for all layers to load (using allSettled so one failure doesn't stop others)
-        const results = await Promise.allSettled(layerLoadPromises);
+    // Wait for all layers to load (using allSettled so one failure doesn't stop others)
+    const results = await Promise.allSettled(layerLoadPromises);
 
-        // Extract successful layers and sort by original config order to preserve layer rendering order
-        const loadedLayers = results
-          .filter(result => result.status === 'fulfilled' && result.value.layer !== null)
-          .map(result => result.value)
-          .sort((a, b) => a.index - b.index) // Sort by original config order
-          .map(item => item.layer);
+    // Extract successful layers and sort by original config order to preserve layer rendering order
+    const loadedLayers = results
+      .filter(result => result.status === 'fulfilled' && result.value.layer !== null)
+      .map(result => result.value)
+      .sort((a, b) => a.index - b.index) // Sort by original config order
+      .map(item => item.layer);
 
-        console.log(`Loaded ${loadedLayers.length}/${parquetConfig.layers.length} Parquet layers successfully`);
+    console.log(`Loaded ${loadedLayers.length}/${parquetConfig.layers.length} Parquet layers successfully`);
 
-        // Add all loaded layers to deck in correct order (single batch update)
-        if (loadedLayers.length > 0) {
-          const currentLayers = window.deckgl.props.layers || [];
+    // Add all loaded layers to deck in correct order (single batch update)
+    if (loadedLayers.length > 0) {
+      const currentLayers = window.deckgl.props.layers || [];
 
-          // Remove any existing Parquet layers to avoid duplicates
-          const parquetLayerIds = new Set(parquetConfig.layers.map(l => l.id));
-          const filteredLayers = currentLayers.filter(l => !parquetLayerIds.has(l.id));
+      // Remove any existing Parquet layers to avoid duplicates
+      const parquetLayerIds = new Set(parquetConfig.layers.map(l => l.id));
+      const filteredLayers = currentLayers.filter(l => !parquetLayerIds.has(l.id));
 
-          // Add all new Parquet layers in correct order
-          window.deckgl.setProps({ layers: [...filteredLayers, ...loadedLayers] });
-          console.log("All Parquet layers added to deck in config order");
+      // Add all new Parquet layers in correct order
+      window.deckgl.setProps({ layers: [...filteredLayers, ...loadedLayers] });
+      console.log("All Parquet layers added to deck in config order");
 
-          // Initialize visibility states for all loaded layers
-          loadedLayers.forEach(layer => {
-            if (layerVisibility[layer.id] === undefined) {
-              const configLayer = parquetConfig.layers.find(l => l.id === layer.id);
-              layerVisibility[layer.id] = configLayer?.options?.visible !== false;
-            }
-          });
-
-          // Update layer toggles if panel is expanded
-          if (layersSection && layersSection.classList.contains("expanded")) {
-            populateLayerToggles();
-          }
+      // Initialize visibility states for all loaded layers
+      loadedLayers.forEach(layer => {
+        if (layerVisibility[layer.id] === undefined) {
+          const configLayer = parquetConfig.layers.find(l => l.id === layer.id);
+          layerVisibility[layer.id] = configLayer?.options?.visible !== false;
         }
+      });
 
-        console.log("All Parquet layers loading complete");
-      } catch (error) {
-        console.error("Failed to load Parquet layer configuration:", error);
+      // Update layer toggles if panel is expanded
+      if (layersSection && layersSection.classList.contains("expanded")) {
+        populateLayerToggles();
       }
-    }, { once: true });
-  })
-  .catch((error) => {
-    console.error("Error loading layer configuration:", error);
-    // Fallback - could load default layers here if needed
-  });
+    }
+
+    console.log("All Parquet layers loading complete");
+  } catch (error) {
+    console.error("Failed to load Parquet layer configuration:", error);
+  }
+}, { once: true });
 
 // Log when data is loaded
 console.log("DeckGL transport analysis viewer initialized");
@@ -1888,21 +1784,8 @@ function handleCenterLocation() {
 
 // Layer management functionality
 const layerVisibility = {};
-const layerDisplayNames = {
-  "commute-tier-hulls-train": "Train Commute Zones",
-  "commute-tier-hulls-tram": "Tram Commute Zones",
-  "isochrones-5min": "5-minute Walking",
-  "isochrones-15min": "15-minute Walking",
-  "lga-boundaries": "LGA Boundaries",
-  "suburbs-sal": "Suburbs and Localities (SAL)",
-  "postcodes-with-trams-trains": "Serviced Postcodes",
-  "ptv-lines-tram": "Tram Lines",
-  "ptv-lines-train": "Train Lines",
-  "ptv-stops-tram": "Tram Stops",
-  "ptv-stops-train": "Train Stops",
-  "real-estate-candidates": "Property Candidates",
-  // Parquet layer display names are loaded dynamically from parquet_layers_config.json
-};
+// Parquet layer display names are loaded dynamically from parquet_layers_config.json
+const layerDisplayNames = {};
 
 // Function to populate layer toggles
 function populateLayerToggles() {
