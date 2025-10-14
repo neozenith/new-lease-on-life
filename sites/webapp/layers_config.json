@@ -30,7 +30,8 @@
       "getLineColor": [50, 200, 50, 200],
       "getLineWidth": 4,
       "lineWidthMinPixels": 1,
-      "lineWidthMaxPixels": 8
+      "lineWidthMaxPixels": 8,
+      "visible": false
     },
     {
       "id": "commute-tier-hulls-tram",
@@ -46,7 +47,8 @@
       "getLineColor": [255, 150, 50, 200],
       "getLineWidth": 4,
       "lineWidthMinPixels": 2,
-      "lineWidthMaxPixels": 8
+      "lineWidthMaxPixels": 8,
+      "visible": false
     },
     {
       "id": "isochrones-5min",
@@ -62,6 +64,7 @@
       "lineWidthMinPixels": 1,
       "autoHighlight": false,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -80,6 +83,7 @@
       "lineWidthMinPixels": 1,
       "autoHighlight": false,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -98,7 +102,8 @@
       "getFillColor": [50, 200, 200, 0],
       "getLineWidth": 6,
       "lineWidthMinPixels": 4,
-      "lineWidthMaxPixels": 18
+      "lineWidthMaxPixels": 18,
+      "visible": false
     },
     {
       "id": "postcodes-with-trams-trains",
@@ -114,7 +119,8 @@
       "getFillColor": [200, 50, 200, 0],
       "getLineWidth": 6,
       "lineWidthMinPixels": 4,
-      "lineWidthMaxPixels": 18
+      "lineWidthMaxPixels": 18,
+      "visible": false
     },
     
     {
@@ -131,7 +137,8 @@
       "getFillColor": [200, 200, 50, 0],
       "getLineWidth": 6,
       "lineWidthMinPixels": 4,
-      "lineWidthMaxPixels": 18
+      "lineWidthMaxPixels": 18,
+      "visible": false
     },
     {
       "id": "ptv-lines-tram",
@@ -147,6 +154,7 @@
       "lineWidthMinPixels": 1,
       "autoHighlight": true,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -165,6 +173,7 @@
       "lineWidthMinPixels": 1,
       "autoHighlight": true,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -184,6 +193,7 @@
       "pointRadiusMaxPixels": 8,
       "autoHighlight": true,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -203,6 +213,7 @@
       "pointRadiusMaxPixels": 8,
       "autoHighlight": true,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }
@@ -226,6 +237,7 @@
       "getLineWidth": 2,
       "autoHighlight": true,
       "highlightColor": "color:hover",
+      "visible": false,
       "transitions": {
         "getFillColor": 200
       }

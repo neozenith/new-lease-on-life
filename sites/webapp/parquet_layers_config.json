@@ -15,7 +15,7 @@
         "lineWidthMinPixels": 1,
         "autoHighlight": false,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -36,7 +36,7 @@
         "lineWidthMinPixels": 1,
         "autoHighlight": false,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -57,7 +57,7 @@
         "getLineWidth": 4,
         "lineWidthMinPixels": 1,
         "lineWidthMaxPixels": 8,
-        "visible": false
+        "visible": true
       }
     },
     {
@@ -76,7 +76,7 @@
         "getLineWidth": 4,
         "lineWidthMinPixels": 2,
         "lineWidthMaxPixels": 8,
-        "visible": false
+        "visible": true
       }
     },
     {
@@ -95,7 +95,7 @@
         "getLineWidth": 6,
         "lineWidthMinPixels": 4,
         "lineWidthMaxPixels": 18,
-        "visible": false
+        "visible": true
       }
     },
     {
@@ -114,7 +114,7 @@
         "getLineWidth": 6,
         "lineWidthMinPixels": 4,
         "lineWidthMaxPixels": 18,
-        "visible": false
+        "visible": true
       }
     },
     {
@@ -133,7 +133,7 @@
         "getLineWidth": 6,
         "lineWidthMinPixels": 4,
         "lineWidthMaxPixels": 18,
-        "visible": false
+        "visible": true
       }
     },
     {
@@ -152,7 +152,7 @@
         "pointRadiusMaxPixels": 8,
         "autoHighlight": true,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -174,7 +174,7 @@
         "pointRadiusMaxPixels": 8,
         "autoHighlight": true,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -195,7 +195,7 @@
         "lineWidthMinPixels": 1,
         "autoHighlight": true,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -216,7 +216,7 @@
         "lineWidthMinPixels": 1,
         "autoHighlight": true,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
@@ -241,7 +241,7 @@
         "getLineWidth": 2,
         "autoHighlight": true,
         "highlightColor": [255, 150, 0, 120],
-        "visible": false,
+        "visible": true,
         "transitions": {
           "getFillColor": 200
         }
