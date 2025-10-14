@@ -79,6 +79,24 @@ async function initializeDuckDB() {
   const connection = await db.connect();
 
   console.log("DuckDB initialized successfully");
+  updateDuckDBStatus('loading', 'Loading spatial extension...');
+
+  // Install and load the spatial extension
+  try {
+    await connection.query("INSTALL spatial;");
+    await connection.query("LOAD spatial;");
+    console.log("Spatial extension loaded successfully");
+  } catch (error) {
+    console.warn("Spatial extension already installed or error loading:", error);
+    // Try to just load it in case it's already installed
+    try {
+      await connection.query("LOAD spatial;");
+      console.log("Spatial extension loaded successfully (already installed)");
+    } catch (e) {
+      console.warn("Could not load spatial extension:", e);
+    }
+  }
+
   updateDuckDBStatus('loading', 'Loading rental database...');
 
   // Load the rental sales database
@@ -168,6 +186,76 @@ function resolveColorReference(value, colors) {
     }
   }
   return value;
+}
+
+// Function to load GeoJSON from Parquet file using DuckDB
+async function loadParquetAsGeoJSON(parquetPath) {
+  if (!window.duckdbConnection) {
+    throw new Error("DuckDB connection not available. Database must be initialized first.");
+  }
+
+  console.log(`Loading Parquet file: ${parquetPath}`);
+
+  // Fetch the parquet file
+  const response = await fetch(parquetPath);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${parquetPath}: ${response.status} ${response.statusText}`);
+  }
+
+  const parquetBuffer = await response.arrayBuffer();
+  const fileName = parquetPath.split('/').pop();
+
+  // Register the file with DuckDB
+  await window.duckdbDatabase.registerFileBuffer(fileName, new Uint8Array(parquetBuffer));
+
+  // Query the parquet file and convert geometry to GeoJSON format
+  // DuckDB spatial extension's ST_AsGeoJSON converts geometry to proper GeoJSON
+  const query = `
+    SELECT
+      ST_AsGeoJSON(geometry) as geometry_json,
+      * EXCLUDE geometry
+    FROM '${fileName}'
+  `;
+
+  const result = await window.duckdbConnection.query(query);
+  const rows = result.toArray();
+
+  console.log(`Loaded ${rows.length} features from ${parquetPath}`);
+
+  // Convert rows to GeoJSON FeatureCollection
+  const features = rows.map(row => {
+    // Parse the geometry JSON string
+    let geometry = null;
+    if (row.geometry_json) {
+      try {
+        geometry = JSON.parse(row.geometry_json);
+      } catch (e) {
+        console.warn('Failed to parse geometry JSON:', e);
+        geometry = null;
+      }
+    }
+
+    // Create properties object by excluding geometry fields
+    const properties = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (key !== 'geometry_json') {
+        properties[key] = value;
+      }
+    }
+
+    return {
+      type: 'Feature',
+      geometry: geometry,
+      properties: properties
+    };
+  });
+
+  const geojson = {
+    type: 'FeatureCollection',
+    features: features
+  };
+
+  return geojson;
 }
 
 // Function to create layers from config
@@ -1416,6 +1504,57 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
+// Function to create a layer from Parquet file
+async function createParquetLayer(layerId, parquetPath, layerOptions = {}) {
+  try {
+    console.log(`Creating Parquet layer: ${layerId}`);
+    const geojson = await loadParquetAsGeoJSON(parquetPath);
+
+    // Create layer with the loaded GeoJSON data
+    const layer = new GeoJsonLayer({
+      id: layerId,
+      data: geojson,
+      ...layerOptions
+    });
+
+    console.log(`Successfully created Parquet layer: ${layerId} with ${geojson.features.length} features`);
+    return layer;
+  } catch (error) {
+    console.error(`Error creating Parquet layer ${layerId}:`, error);
+    throw error;
+  }
+}
+
+// Function to add Parquet layer to existing deck
+async function addParquetLayerToDeck(layerId, parquetPath, layerOptions = {}) {
+  // Wait for DuckDB to be ready
+  if (!window.duckdbConnection) {
+    console.log("Waiting for DuckDB to be ready before loading Parquet layer...");
+    await new Promise((resolve) => {
+      window.addEventListener("duckdbReady", resolve, { once: true });
+    });
+  }
+
+  const layer = await createParquetLayer(layerId, parquetPath, layerOptions);
+
+  // Add to existing layers
+  const currentLayers = window.deckgl.props.layers || [];
+  const filteredLayers = currentLayers.filter((l) => l.id !== layerId);
+  window.deckgl.setProps({ layers: [...filteredLayers, layer] });
+
+  // Initialize visibility state
+  if (layerVisibility[layerId] === undefined) {
+    layerVisibility[layerId] = layerOptions.visible !== false;
+  }
+
+  // Update layer toggles if panel is expanded
+  if (layersSection && layersSection.classList.contains("expanded")) {
+    populateLayerToggles();
+  }
+
+  return layer;
+}
+
 // Load the layer configuration and initialize layers
 fetch("./layers_config.json")
   .then((response) => response.json())
@@ -1425,6 +1564,37 @@ fetch("./layers_config.json")
     window.deckgl.setProps({ layers });
     console.log("Layer configuration loaded successfully");
     console.log(`Loaded ${layers.length} layers from config`);
+
+    // Add Parquet-based 15-minute isochrone layer after DuckDB is ready
+    // This will be added alongside the existing GeoJSON layer for comparison
+    window.addEventListener("duckdbReady", async () => {
+      console.log("DuckDB ready, loading Parquet layer...");
+      try {
+        await addParquetLayerToDeck(
+          "isochrones-15min-parquet",
+          "./data/15.parquet",
+          {
+            filled: true,
+            stroked: true,
+            extruded: false,
+            pickable: false,
+            getFillColor: config.colors?.fill15min || [0, 150, 200, 20],
+            getLineColor: config.colors?.line15min || [0, 100, 150, 200],
+            getLineWidth: 1,
+            lineWidthMinPixels: 1,
+            autoHighlight: false,
+            highlightColor: config.colors?.hover || [255, 150, 0, 120],
+            visible: false, // Start hidden so user can toggle it on
+            transitions: {
+              getFillColor: 200
+            }
+          }
+        );
+        console.log("Parquet layer added successfully");
+      } catch (error) {
+        console.error("Failed to add Parquet layer:", error);
+      }
+    }, { once: true });
   })
   .catch((error) => {
     console.error("Error loading layer configuration:", error);
@@ -1631,6 +1801,7 @@ const layerDisplayNames = {
   "commute-tier-hulls-tram": "Tram Commute Zones",
   "isochrones-5min": "5-minute Walking",
   "isochrones-15min": "15-minute Walking",
+  "isochrones-15min-parquet": "15-minute Walking (Parquet)",
   "lga-boundaries": "LGA Boundaries",
   "suburbs-sal": "Suburbs and Localities (SAL)",
   "postcodes-with-trams-trains": "Serviced Postcodes",

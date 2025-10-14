@@ -58,3 +58,18 @@ if __name__ == "__main__":
 
     convert("data/public_transport_lines.geojson")
     convert("data/public_transport_stops.geojson")
+
+
+    convert("sites/webapp/data/15.geojson")
+    convert("sites/webapp/data/5.geojson")
+    convert("sites/webapp/data/all_candidates.geojson")
+    convert("sites/webapp/data/lines_within_union_metro_train.geojson")
+    convert("sites/webapp/data/lines_within_union_metro_tram.geojson")
+    convert("sites/webapp/data/ptv_commute_tier_hulls_metro_train.geojson")
+    convert("sites/webapp/data/ptv_commute_tier_hulls_metro_tram.geojson")
+    convert("sites/webapp/data/selected_lga_2024_aust_gda2020.geojson")
+    convert("sites/webapp/data/selected_postcodes_with_trams_trains.geojson")
+    convert("sites/webapp/data/selected_sa2_2021_aust_gda2020.geojson")
+    convert("sites/webapp/data/selected_sal_2021_aust_gda2020.geojson")
+    convert("sites/webapp/data/stops_with_commute_times_metro_train.geojson")
+    convert("sites/webapp/data/stops_with_commute_times_metro_tram.geojson")
