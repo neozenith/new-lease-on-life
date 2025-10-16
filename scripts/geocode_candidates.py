@@ -311,7 +311,9 @@ class CandidateGeocoder:
             gdf_with_geom.to_file(OUTPUT_ALL_CANDIDATES, driver="GeoJSON")
             log.info(f"Saved {len(gdf_with_geom)} features to {OUTPUT_ALL_CANDIDATES}")
 
-            gdf_with_geom.to_file(OUTPUT_WEBSITE_ALL_CANDIDATES, driver="GeoJSON")
+            # gdf_with_geom.to_file(OUTPUT_WEBSITE_ALL_CANDIDATES, driver="GeoJSON")
+            gdf_with_geom.to_parquet(OUTPUT_WEBSITE_ALL_CANDIDATES.with_suffix(".parquet"), engine="pyarrow", index=False)
+
             log.info(f"Saved {len(gdf_with_geom)} features to {OUTPUT_WEBSITE_ALL_CANDIDATES}")
         else:
             log.warning("No features with geometry to save")

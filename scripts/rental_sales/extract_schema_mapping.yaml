@@ -9,43 +9,43 @@
     - sheet: '1 bedroom flat'
       dwelling_type: unit
       bedrooms: 1
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: '2 bedroom flat'
       dwelling_type: unit
       bedrooms: 2
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: '3 bedroom flat'
       dwelling_type: unit
       bedrooms: 3
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: '2 bedroom house'
       dwelling_type: house
       bedrooms: 2
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: '3 bedroom house'
       dwelling_type: house
       bedrooms: 3
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: '4 bedroom house'
       dwelling_type: house
       bedrooms: 4
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
     - sheet: 'All properties'
       dwelling_type: all
       bedrooms: all
-      time_bucket_range: C2:GT2
+      time_bucket_range: D2:GW2
       statistic: [count, median] # Alternating columns of count and median for the given range
       geospatial_range: B4:B161
 
