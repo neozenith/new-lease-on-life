@@ -78,7 +78,8 @@ isochrones: aux_data consolidate_isochrones
 # RENTAL/SALES DATA PROCESSING
 ##################################################
 
-rentals: consolidate_isochrones scripts/geocode_candidates.py
+rentals: data/candidate_real_estate/all_candidates.parquet
+data/candidate_real_estate/all_candidates.parquet: consolidate_isochrones scripts/geocode_candidates.py
 	time uv run scripts/geocode_candidates.py
 
 data/originals/processed/all_extracted_data.duckdb: scripts/rental_sales/extract.py
@@ -93,7 +94,7 @@ sites/webapp/data/rental_sales.duckdb: data/originals/processed/all_extracted_da
 # MAPPING STATIC SITE DATA TO SOURCE JOBS
 ##################################################
 
-data/geojson/ptv/boundaries/selected_lga_2024_aust_gda2020.geojson data/geojson/ptv/boundaries/selected_sa2_2021_aust_gda2020.geojson: postcode_polygons_subset
+data/geojson/ptv/boundaries/selected_lga_2024_aust_gda2020.geojson data/geojson/ptv/boundaries/selected_sal_2021_aust_gda2020.parquet: postcode_polygons_subset
 
 data/isochrones_concatenated/foot/5.geojson data/isochrones_concatenated/foot/15.geojson: fix_isochrone_geojson
 
@@ -131,7 +132,7 @@ sites/webapp/data/stops_with_commute_times_metro_tram.parquet: data/geojson/ptv/
 sites/webapp/data/selected_lga_2024_aust_gda2020.parquet: data/geojson/ptv/boundaries/selected_lga_2024_aust_gda2020.parquet
 	cp $< $@
 
-sites/webapp/data/selected_sa2_2021_aust_gda2020.parquet: data/geojson/ptv/boundaries/selected_sa2_2021_aust_gda2020.parquet
+sites/webapp/data/selected_sal_2021_aust_gda2020.parquet: data/geojson/ptv/boundaries/selected_sal_2021_aust_gda2020.parquet
 	cp $< $@
 
 
@@ -141,7 +142,7 @@ site_data: sites/webapp/data/5.parquet sites/webapp/data/15.parquet sites/webapp
 	sites/webapp/data/ptv_commute_tier_hulls_metro_train.parquet sites/webapp/data/ptv_commute_tier_hulls_metro_tram.parquet \
 	sites/webapp/data/selected_postcodes_with_trams_trains.parquet \
 	sites/webapp/data/stops_with_commute_times_metro_train.parquet sites/webapp/data/stops_with_commute_times_metro_tram.parquet \
-	sites/webapp/data/selected_lga_2024_aust_gda2020.parquet sites/webapp/data/selected_sa2_2021_aust_gda2020.parquet rental_sales
+	sites/webapp/data/selected_lga_2024_aust_gda2020.parquet sites/webapp/data/selected_sal_2021_aust_gda2020.parquet rental_sales
 
 
 all: aux_data migrate_ptv_stops_lines_geojson_geoparquet rentals site_data

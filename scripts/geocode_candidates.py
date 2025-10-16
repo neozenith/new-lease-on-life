@@ -56,14 +56,23 @@ WEBSITE_OUTPUT_DIR = PROJECT_ROOT / "sites" / "webapp" / "data"
 OUTPUT_WEBSITE_ALL_CANDIDATES = WEBSITE_OUTPUT_DIR / "all_candidates.geojson"
 
 # Isochrone files for walkability check
-INPUT_ISOCHRONE_FOOT_5MIN = WEBSITE_OUTPUT_DIR / "5.geojson"
-INPUT_ISOCHRONE_FOOT_15MIN = WEBSITE_OUTPUT_DIR / "15.geojson"
+INPUT_ISOCHRONE_FOOT_5MIN = WEBSITE_OUTPUT_DIR / "5.parquet"
+INPUT_ISOCHRONE_FOOT_15MIN = WEBSITE_OUTPUT_DIR / "15.parquet"
 
 # Environment variables
 GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY", "")
 
 # Helper lambdas
 _format_file_list = lambda files, max_show=5: '\n        '.join(f"- {p.relative_to(PROJECT_ROOT)}" for p in files[:max_show]) + (f"\n        ... and {len(files) - max_show} more files" if len(files) > max_show else "")  # noqa: E731
+
+def read_geofile(filepath: Path) -> gpd.GeoDataFrame:
+    print(filepath, filepath.suffix)
+    if filepath.suffix == '.geojson':
+        return gpd.read_file(filepath)
+    elif filepath.suffix == '.parquet':
+        return gpd.read_parquet(filepath)
+    else:
+        raise ValueError("Unknown filetype")
 
 def check_ptv_walkability(lat: float, lon: float) -> Tuple[bool, bool]:
     """
@@ -80,8 +89,8 @@ def check_ptv_walkability(lat: float, lon: float) -> Tuple[bool, bool]:
 
     try:
         # Load isochrone boundaries
-        foot_5min_gdf = gpd.read_file(INPUT_ISOCHRONE_FOOT_5MIN)
-        foot_15min_gdf = gpd.read_file(INPUT_ISOCHRONE_FOOT_15MIN)
+        foot_5min_gdf =read_geofile(INPUT_ISOCHRONE_FOOT_5MIN)
+        foot_15min_gdf = read_geofile(INPUT_ISOCHRONE_FOOT_15MIN)
 
         # Check containment
         inside_5_min = any(foot_5min_gdf.contains(point))
